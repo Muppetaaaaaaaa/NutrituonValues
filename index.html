@@ -10,7 +10,7 @@
   <style>
     :root { --gap: 14px; --radius: 12px; }
     html,body{margin:0;background:#0f1115;color:#f5f6f8;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;}
-    header{padding:18px var(--gap); background:#0a0c10; position:sticky; top:0; z-index:2; border-bottom:1px solid #1c212b;}
+    header{padding:18px var(--gap); background:#0a0c10; position:sticky; top:0; z-index:3; border-bottom:1px solid #1c212b;}
     h1{font-size:1.15rem; margin:0;}
     main{padding:var(--gap);}
     .card{background:#12151c;border:1px solid #1e2530;border-radius:var(--radius);padding:var(--gap);}
@@ -21,8 +21,9 @@
       font-weight:600; font-size:0.95rem; cursor:pointer;
     }
     button.secondary{background:#2a2f3a;}
+    button.ghost{background:transparent;border:1px solid #2a2f3a;}
     button:disabled{opacity:.55; cursor:not-allowed;}
-    input, select, textarea{
+    input, select{
       background:#0e1218; color:#e9edf3; border:1px solid #1e2530; padding:12px; border-radius:10px; width:100%;
     }
     label{font-size:.9rem; color:#a9b3c3;}
@@ -30,13 +31,24 @@
     .success{color:#71dd7a;}
     .warn{color:#ffcc66;}
     .error{color:#ff7a7a;}
-    #reader{width:100%; min-height:320px; background:#0e1218; border:1px dashed #2a3240; border-radius:var(--radius);}
+    #reader{width:100%; min-height:320px; background:#0e1218; border:1px dashed #2a3240; border-radius:var(--radius); position:relative;}
     #product-details pre{white-space:pre-wrap;word-wrap:break-word;}
     .list-item{border-top:1px dashed #273042; padding-top:10px; margin-top:10px;}
     a{color:#8ab4ff; text-decoration:none;}
     .pill{display:inline-block; font-size:.8rem; border:1px solid #2d3648; padding:4px 8px; border-radius:999px; margin-right:6px;}
     footer{margin-top:28px; color:#8d98ab;}
     .badge{display:inline-flex; align-items:center; gap:8px; font-size:.8rem; padding:4px 8px; border:1px solid #2d3648; border-radius:999px;}
+    /* Camera toolbar */
+    .toolbar{display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
+    .tabs{display:flex; gap:6px; margin-bottom:8px;}
+    .tab{padding:8px 10px; border:1px solid #2d3648; border-radius:999px; cursor:pointer; font-size:.9rem;}
+    .tab.active{background:#1a73e8;border-color:#1a73e8;color:#fff;}
+    /* Toast */
+    #toast{position:fixed; left:50%; transform:translateX(-50%); bottom:24px; background:#1b2332; border:1px solid #2a3242; color:#e9edf3; padding:12px 14px; border-radius:10px; box-shadow:0 6px 30px rgba(0,0,0,.35); z-index:5; opacity:0; pointer-events:none; transition:opacity .25s, bottom .25s;}
+    #toast.show{opacity:1; bottom:34px;}
+    /* Goals grid */
+    .grid{display:grid; gap:10px;}
+    @media(min-width:700px){ .grid-cols-3{ grid-template-columns: repeat(3, 1fr); } .grid-cols-2{ grid-template-columns: repeat(2, 1fr); } }
   </style>
 </head>
 <body>
@@ -45,16 +57,78 @@
   </header>
 
   <main class="stack" aria-live="polite">
+    <!-- Goals -->
+    <section class="card stack" aria-label="Nutrition goals">
+      <h2 style="margin:0;font-size:1.05rem;">Your Nutrition Goals</h2>
+      <div class="grid grid-cols-3">
+        <div class="stack">
+          <label for="weight">Body weight (kg)</label>
+          <input id="weight" type="number" min="30" max="300" step="0.1" placeholder="e.g. 75" />
+        </div>
+        <div class="stack">
+          <label for="goalType">Goal</label>
+          <select id="goalType">
+            <option value="lose">Lose</option>
+            <option value="maintain" selected>Maintain</option>
+            <option value="gain">Gain</option>
+          </select>
+        </div>
+        <div class="stack">
+          <label for="calTarget">Daily calorie target (kcal)</label>
+          <input id="calTarget" type="number" min="800" max="5000" step="10" placeholder="e.g. 2200" />
+        </div>
+      </div>
+      <div class="grid grid-cols-2">
+        <div class="stack">
+          <label for="proteinPerKg">Protein factor (g/kg)</label>
+          <input id="proteinPerKg" type="number" min="1.2" max="2.6" step="0.1" value="1.8" />
+          <div class="muted">Tip: 1.6–2.2 g/kg is a common range.</div>
+        </div>
+        <div class="stack">
+          <label for="fatPct">Fat share (% of calories)</label>
+          <input id="fatPct" type="number" min="20" max="40" step="1" value="30" />
+        </div>
+      </div>
+      <div class="row">
+        <button id="calcGoals">Calculate targets</button>
+        <div id="goalStatus" class="muted">Enter values and click Calculate.</div>
+      </div>
+      <div id="goalsOut" class="row" style="gap:10px; flex-wrap:wrap;">
+        <!-- Pills injected here -->
+      </div>
+    </section>
+
+    <!-- Scanner -->
     <section class="card stack" aria-label="Scanner">
       <div class="row" style="align-items:center; justify-content:space-between;">
-        <div class="muted">
-          Use **Camera** if available; otherwise use **File upload** or the manual box.
-        </div>
+        <div class="muted">Use **Camera** if available; otherwise **File upload** or manual entry.</div>
         <div id="modeBadge" class="badge muted">Loading scanner…</div>
       </div>
-      <div id="reader" role="region" aria-label="Camera or file barcode scanner"></div>
 
-      <!-- Lite mode (shown only if html5-qrcode fails entirely) -->
+      <div class="tabs" role="tablist" aria-label="Scan mode">
+        <div id="tabCamera" class="tab active" role="tab" aria-selected="true">Camera</div>
+        <div id="tabFile" class="tab" role="tab" aria-selected="false">File</div>
+      </div>
+
+      <!-- Camera pane -->
+      <div id="paneCamera" class="stack">
+        <div class="toolbar">
+          <button id="startCam" class="ghost">Start camera</button>
+          <button id="flipCam" class="ghost" disabled>Flip camera</button>
+          <button id="stopCam" class="ghost" disabled>Stop</button>
+        </div>
+        <div id="reader" role="region" aria-label="Camera barcode scanner"></div>
+      </div>
+
+      <!-- File pane -->
+      <div id="paneFile" class="stack" style="display:none;">
+        <input id="fileInput" type="file" accept="image/*" />
+        <div class="row">
+          <button id="fileDecode" class="secondary">Decode from image</button>
+        </div>
+      </div>
+
+      <!-- Lite mode (if html5-qrcode fails entirely) -->
       <div id="liteMode" class="stack" style="display:none;">
         <div class="muted">Scanner library failed to load. Switched to <strong>Lite mode</strong> (file uploads only).</div>
         <input id="liteFile" type="file" accept="image/*" />
@@ -86,16 +160,18 @@
       <div id="status" class="muted">Ready.</div>
     </section>
 
+    <!-- Latest -->
     <section class="card stack" aria-label="Latest scan result">
       <h2 style="margin:0;font-size:1.05rem;">Latest product</h2>
       <div id="product-details" class="stack">
-        <div class="muted">Scan a barcode (camera or file) to see details here.</div>
+        <div class="muted">Scan a barcode to see details here.</div>
       </div>
       <div class="row">
         <button id="addToList" disabled>Add to document list</button>
       </div>
     </section>
 
+    <!-- Queue -->
     <section class="card stack" aria-label="Document queue">
       <h2 style="margin:0;font-size:1.05rem;">Items to export</h2>
       <div id="queue" class="stack muted">Nothing added yet.</div>
@@ -110,15 +186,32 @@
     </footer>
   </main>
 
+  <!-- Toast -->
+  <div id="toast" role="status" aria-live="assertive"></div>
+
   <script>
     /***** Helpers & state *****/
-    const state = { lastDecoded:null, lastTime:0, currentProduct:null, queue:[] };
+    const state = {
+      lastDecoded:null, lastTime:0,
+      currentProduct:null, queue:[],
+      // camera
+      html5Qrcode: null,
+      camFacing: 'environment', // 'environment' | 'user'
+      html5Loaded: false,
+    };
+
     const $ = (id) => document.getElementById(id);
     const statusEl = $('status'), detailsEl = $('product-details'), queueEl = $('queue');
     const addBtn = $('addToList'), exportBtn = $('exportDocx'), removeBtn = $('removeLast');
-    const modeBadge = $('modeBadge');
+    const modeBadge = $('modeBadge'), toastEl = $('toast');
 
     function setStatus(msg, cls="muted"){ statusEl.className = cls; statusEl.textContent = msg; }
+    function toast(msg){
+      toastEl.textContent = msg;
+      toastEl.classList.add('show');
+      if (navigator.vibrate) try{ navigator.vibrate(40); }catch(_){}
+      setTimeout(()=> toastEl.classList.remove('show'), 2200);
+    }
     function fmt(v){ return (v ?? "").toString().trim(); }
     function asList(v){ if(!v) return ""; if(Array.isArray(v)) return v.filter(Boolean).join(", "); return String(v); }
 
@@ -169,7 +262,7 @@
     function renderProduct(p){
       detailsEl.innerHTML = '';
       if(!p){
-        detailsEl.innerHTML = '<div class="muted">Scan a barcode (camera or file) to see details here.</div>';
+        detailsEl.innerHTML = '<div class="muted">Scan a barcode to see details here.</div>';
         addBtn.disabled = true; return;
       }
       const wrap = document.createElement('div');
@@ -210,6 +303,48 @@
         </div>`).join('');
     }
 
+    /***** Goals calculator *****/
+    const weightEl = $('weight'), goalTypeEl = $('goalType'), calTargetEl = $('calTarget');
+    const proteinPerKgEl = $('proteinPerKg'), fatPctEl = $('fatPct'), goalStatus = $('goalStatus'), goalsOut = $('goalsOut');
+    $('calcGoals').addEventListener('click', calcGoals);
+
+    function calcGoals(){
+      const weight = parseFloat(weightEl.value);
+      const goal = goalTypeEl.value;
+      let cals = parseFloat(calTargetEl.value);
+      const ppk = Math.max(1.0, Math.min(3.5, parseFloat(proteinPerKgEl.value) || 1.8));
+      const fatPct = Math.max(15, Math.min(50, parseFloat(fatPctEl.value) || 30));
+
+      if (!weight || weight < 30 || weight > 300){ goalStatus.textContent = 'Enter a valid weight (30–300kg).'; goalStatus.className='warn'; return; }
+      if (!cals || cals < 800 || cals > 5000){
+        // If calories not supplied, suggest a rough start point ~ 30 * kg and adjust by goal
+        const base = 30 * weight;
+        const adj = goal==='lose' ? -300 : goal==='gain' ? +300 : 0;
+        cals = Math.round(base + adj);
+        calTargetEl.value = cals;
+      }
+
+      // Protein target from weight
+      const proteinG = Math.round(ppk * weight);
+      const proteinCals = proteinG * 4;
+
+      // Fat target as % of calories
+      const fatCals = Math.round(cals * (fatPct/100));
+      const fatG = Math.round(fatCals / 9);
+
+      // Carbs = remaining
+      const carbCals = Math.max(0, cals - proteinCals - fatCals);
+      const carbG = Math.round(carbCals / 4);
+
+      goalsOut.innerHTML = `
+        <span class="pill">Calories: <strong>${cals} kcal</strong></span>
+        <span class="pill">Protein: <strong>${proteinG} g</strong></span>
+        <span class="pill">Fat: <strong>${fatG} g</strong> (${fatPct}%)</span>
+        <span class="pill">Carbs: <strong>${carbG} g</strong></span>
+      `;
+      goalStatus.textContent = 'Targets calculated.'; goalStatus.className='success';
+    }
+
     /***** UI wiring *****/
     $('manualGo').addEventListener('click', lookupManual);
     $('clearResults').addEventListener('click', () => { state.currentProduct=null; renderProduct(null); setStatus('Cleared.'); });
@@ -223,7 +358,8 @@
       if (!digits) return setStatus('Enter a barcode to look up.','warn');
       if (!/^\d{8}$|^\d{12}$|^\d{13}$/.test(digits)) return setStatus('Enter a valid EAN-8 / UPC-A / UPC-E / EAN-13 code.','warn');
       try{
-        const p = await fetchProduct(digits); state.currentProduct=p; renderProduct(p); setStatus(`Found product for ${digits}.`,'success');
+        const p = await fetchProduct(digits); state.currentProduct=p; renderProduct(p);
+        setStatus(`Found product for ${digits}.`,'success'); toast(`Found: ${p.name || 'Product'} (${digits})`);
       }catch(err){ setStatus(err.message,'error'); state.currentProduct=null; renderProduct(null); }
     }
 
@@ -276,130 +412,160 @@
       setStatus(`Exported ${state.queue.length} item(s) to ${fname}.`, 'success');
     }
 
-    /***** Robust loader for html5-qrcode with fallbacks *****/
+    /***** Scanner libs: html5-qrcode with CDN fallbacks; ZXing lite fallback *****/
     const CDN_TRIES = [
       'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js',
       'https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/minified/html5-qrcode.min.js',
       'https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js'
     ];
-
     function loadScript(src){ return new Promise((resolve,reject)=>{ const s=document.createElement('script'); s.src=src; s.async=true; s.onload=resolve; s.onerror=reject; document.head.appendChild(s); }); }
+    async function loadHtml5WithFallbacks(){ for (const url of CDN_TRIES){ try{ await loadScript(url); if (window.Html5Qrcode) return true; }catch(e){} } return false; }
 
-    async function loadHtml5QrcodeWithFallbacks(){
-      for (const url of CDN_TRIES){
-        try{ await loadScript(url); if (window.Html5QrcodeScanner) return true; }catch(e){}
-      }
-      return false;
-    }
-
-    /***** ZXing fallback (Lite mode: file upload only) *****/
     async function ensureZXing(){
       if (window.ZXing) return true;
-      try{
-        await loadScript('https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0');
-        return !!window.ZXing;
-      }catch(e){ return false; }
+      try{ await loadScript('https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0'); return !!window.ZXing; }catch(e){ return false; }
     }
 
-    async function decodeWithZXingFromFile(file){
-      const codeReader = new ZXing.BrowserBarcodeReader();
-      // Prefer linear retail formats (EAN/UPC); ZXing auto-detects.
-      const img = URL.createObjectURL(file);
+    /***** Camera controls using Html5Qrcode directly (so we can Flip) *****/
+    const tabCamera = $('tabCamera'), tabFile = $('tabFile'), paneCamera = $('paneCamera'), paneFile = $('paneFile');
+    tabCamera.addEventListener('click', ()=> switchTab('camera'));
+    tabFile.addEventListener('click', ()=> switchTab('file'));
+    function switchTab(which){
+      const isCam = which==='camera';
+      tabCamera.classList.toggle('active', isCam); tabCamera.setAttribute('aria-selected', isCam?'true':'false');
+      tabFile.classList.toggle('active', !isCam); tabFile.setAttribute('aria-selected', !isCam?'true':'false');
+      paneCamera.style.display = isCam ? 'flex' : 'none';
+      paneFile.style.display = isCam ? 'none' : 'flex';
+    }
+
+    const startBtn = $('startCam'), stopBtn = $('stopCam'), flipBtn = $('flipCam');
+    startBtn.addEventListener('click', startCamera);
+    stopBtn.addEventListener('click', stopCamera);
+    flipBtn.addEventListener('click', async ()=>{
+      if (!state.html5Qrcode) return;
+      state.camFacing = (state.camFacing === 'environment') ? 'user' : 'environment';
+      await restartCamera();
+    });
+
+    async function startCamera(){
+      if (!state.html5Loaded){
+        const ok = await loadHtml5WithFallbacks();
+        state.html5Loaded = ok;
+      }
+      if (!state.html5Loaded || !window.Html5Qrcode){ // fall back to file / lite
+        modeBadge.textContent = 'Scanner: Lite mode (file only)';
+        $('liteMode').style.display = 'flex';
+        setStatus('Scanner library unavailable. Use File tab or Lite mode.', 'warn');
+        return;
+      }
+      // create instance once
+      if (!state.html5Qrcode){
+        state.html5Qrcode = new Html5Qrcode("reader");
+      }
+      modeBadge.textContent = 'Scanner: Camera';
+      const config = {
+        fps: 12,
+        qrbox: { width: 320, height: 140 },
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.EAN_8,
+          Html5QrcodeSupportedFormats.UPC_A,
+          Html5QrcodeSupportedFormats.UPC_E
+        ],
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+      };
+      const constraints = { facingMode: { exact: state.camFacing } };
       try{
-        const res = await codeReader.decodeFromImageUrl(img);
-        return res?.text || null;
+        await state.html5Qrcode.start(
+          constraints,
+          config,
+          onScanSuccess,
+          () => {}
+        );
+        startBtn.disabled = true; stopBtn.disabled = false; flipBtn.disabled = false;
+        setStatus(`Camera started (${state.camFacing}).`);
+      }catch(err){
+        // If facingMode exact fails (desktop, single cam), try default device
+        try{
+          await state.html5Qrcode.start({ facingMode: state.camFacing }, config, onScanSuccess, () => {});
+          startBtn.disabled = true; stopBtn.disabled = false; flipBtn.disabled = false;
+          setStatus(`Camera started (${state.camFacing}).`);
+        }catch(err2){
+          setStatus('Failed to start camera. Use File tab or check permissions.', 'error');
+        }
+      }
+    }
+
+    async function stopCamera(){
+      if (!state.html5Qrcode) return;
+      try{ await state.html5Qrcode.stop(); }catch(_){}
+      try{ await state.html5Qrcode.clear(); }catch(_){}
+      startBtn.disabled = false; stopBtn.disabled = true;
+    }
+
+    async function restartCamera(){
+      await stopCamera();
+      await startCamera();
+    }
+
+    async function onScanSuccess(decodedText){
+      const now = Date.now();
+      if (decodedText === state.lastDecoded && now - state.lastTime < 2500) return;
+      state.lastDecoded = decodedText; state.lastTime = now;
+      const digits = decodedText.replace(/\D/g,'');
+      if (!/^\d{8}$|^\d{12}$|^\d{13}$/.test(digits)) return setStatus(`Scanned “${decodedText}” — not a supported EAN/UPC code.`,'warn');
+      try{
+        const p = await fetchProduct(digits); state.currentProduct=p; renderProduct(p);
+        setStatus(`Found product for ${digits}.`,'success'); toast(`Found: ${p.name || 'Product'} (${digits})`);
+      }catch(err){ setStatus(err.message,'error'); state.currentProduct=null; renderProduct(null); }
+    }
+
+    // File decode (html5-qrcode not required; we’ll use ZXing if needed)
+    $('fileDecode').addEventListener('click', async ()=>{
+      const f = $('fileInput').files?.[0];
+      if (!f) return setStatus('Choose an image first.','warn');
+      await decodeFromImageFile(f);
+    });
+
+    async function decodeFromImageFile(file){
+      // Prefer ZXing for file decode (works even without html5-qrcode)
+      const hasZX = await ensureZXing();
+      if (!hasZX){ setStatus('Could not load decoder library for file scanning.','error'); return; }
+      const codeReader = new ZXing.BrowserBarcodeReader();
+      const url = URL.createObjectURL(file);
+      setStatus('Decoding image…');
+      try{
+        const res = await codeReader.decodeFromImageUrl(url);
+        const decoded = res?.text;
+        if (!decoded) return setStatus('No barcode detected in the image.','warn');
+        const digits = decoded.replace(/\D/g,'');
+        if (!/^\d{8}$|^\d{12}$|^\d{13}$/.test(digits)) return setStatus(`Decoded “${decoded}” — not a supported EAN/UPC code.`, 'warn');
+        const p = await fetchProduct(digits); state.currentProduct=p; renderProduct(p);
+        setStatus(`Found product for ${digits}.`, 'success'); toast(`Found: ${p.name || 'Product'} (${digits})`);
+      }catch(e){
+        setStatus('Failed to decode / fetch product from the image.', 'error');
       }finally{
-        URL.revokeObjectURL(img);
+        URL.revokeObjectURL(url);
         codeReader.reset();
       }
     }
 
-    /***** Initialize scanner (html5-qrcode if possible, else Lite mode) *****/
-    async function init(){
-      renderProduct(null); renderQueue();
+    // Lite fallback file decode
+    $('liteDecodeBtn')?.addEventListener('click', async ()=>{
+      const f = $('liteFile').files?.[0];
+      if (!f) return setStatus('Choose an image first.','warn');
+      await decodeFromImageFile(f);
+    });
 
-      // Environment hint
+    /***** Environment hints & boot *****/
+    function boot(){
+      renderProduct(null); renderQueue();
       if (!(location.protocol === 'https:' || location.hostname === 'localhost')) {
         setStatus('Tip: open over HTTPS or localhost for camera access. File upload still works.', 'warn');
       }
-
-      const loaded = await loadHtml5QrcodeWithFallbacks();
-
-      if (loaded && window.Html5QrcodeScanner){
-        modeBadge.textContent = 'Scanner: html5-qrcode';
-        const scanner = new Html5QrcodeScanner(
-          "reader",
-          {
-            fps: 12,
-            qrbox: { width: 320, height: 140 },
-            rememberLastUsedCamera: true,
-            experimentalFeatures: { useBarCodeDetectorIfSupported: true },
-            formatsToSupport: [
-              Html5QrcodeSupportedFormats.EAN_13,
-              Html5QrcodeSupportedFormats.EAN_8,
-              Html5QrcodeSupportedFormats.UPC_A,
-              Html5QrcodeSupportedFormats.UPC_E
-            ],
-            supportedScanTypes: [
-              Html5QrcodeScanType.SCAN_TYPE_CAMERA,
-              Html5QrcodeScanType.SCAN_TYPE_FILE
-            ]
-          },
-          false
-        );
-
-        async function onScanSuccess(decodedText){
-          const now = Date.now();
-          if (decodedText === state.lastDecoded && now - state.lastTime < 2500) return;
-          state.lastDecoded = decodedText; state.lastTime = now;
-          const digits = decodedText.replace(/\D/g,'');
-          if (!/^\d{8}$|^\d{12}$|^\d{13}$/.test(digits)) return setStatus(`Scanned “${decodedText}” — not a supported EAN/UPC code.`,'warn');
-          try{
-            const p = await fetchProduct(digits); state.currentProduct=p; renderProduct(p); setStatus(`Found product for ${digits}.`,'success');
-          }catch(err){ setStatus(err.message,'error'); state.currentProduct=null; renderProduct(null); }
-        }
-        function onScanError(_err){ /* ignore noisy scan errors */ }
-
-        // Optional: tell user if no cameras are exposed
-        if (navigator.mediaDevices?.enumerateDevices) {
-          navigator.mediaDevices.enumerateDevices().then(devs=>{
-            const cams = devs.filter(d=>d.kind==='videoinput');
-            if (cams.length===0) setStatus('No cameras found. Use the File tab or check OS/browser permissions.', 'warn');
-          }).catch(()=>{});
-        }
-
-        scanner.render(onScanSuccess, onScanError);
-        return;
-      }
-
-      // ---- Lite mode: html5-qrcode failed to load; use ZXing for file uploads ----
-      const hasZX = await ensureZXing();
-      $('liteMode').style.display = hasZX ? 'flex' : 'none';
-      modeBadge.textContent = hasZX ? 'Scanner: Lite mode (file only)' : 'Scanner: unavailable';
-      if (!hasZX){
-        setStatus('Could not load scanner libraries from any CDN. Manual entry still works.', 'error');
-        return;
-      }
-      setStatus('Scanner library failed to load. Using Lite mode (upload an image of the barcode).', 'warn');
-
-      $('liteDecodeBtn').addEventListener('click', async ()=>{
-        const f = $('liteFile').files?.[0];
-        if (!f) return setStatus('Choose an image first.','warn');
-        setStatus('Decoding image…');
-        try{
-          const decoded = await decodeWithZXingFromFile(f);
-          if (!decoded) return setStatus('No barcode detected in the image. Try a sharper, closer photo with good lighting.','warn');
-          const digits = decoded.replace(/\D/g,'');
-          if (!/^\d{8}$|^\d{12}$|^\d{13}$/.test(digits)) return setStatus(`Decoded “${decoded}” — not a supported EAN/UPC code.`, 'warn');
-          const p = await fetchProduct(digits); state.currentProduct=p; renderProduct(p);
-          setStatus(`Found product for ${digits}.`, 'success');
-        }catch(e){
-          setStatus('Failed to decode / fetch product from the image.', 'error');
-        }
-      });
+      modeBadge.textContent = 'Scanner: Ready';
     }
-
-    window.addEventListener('DOMContentLoaded', init);
+    window.addEventListener('DOMContentLoaded', boot);
   </script>
 </body>
 </html>
