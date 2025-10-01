@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta
+    name="viewport"
+    content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"
+/>
+  <title>Food Barcode → Word Doc</title>
+  <meta name="theme-color" content="#111" />
+  <!-- html5-qrcode (camera scanning) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js" integrity="sha512-cj6b5z6O3z0rQDT8X8pCD/Sie1qQhF7z04V7iSABtBTsWQiwk6sVv6gRy0hNwQLxVQXzO3mZf7ObxjhNR6N2Lw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <!-- docx (generate .docx in the browser) -->
+  <script src="https://cdn.jsdelivr.net/npm/docx@9.5.1/build/index.js"></script>
+  <style>
+    :root { --gap: 14px; --radius: 12px; }
+    html,body{margin:0;background:#0f1115;color:#f5f6f8;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;}
+    header{padding:18px var(--gap); background:#0a0c10; position:sticky; top:0; z-index:2; border-bottom:1px solid #1c212b;}
+    h1{font-size:1.15rem; margin:0;}
+    main{padding:var(--gap);}
+    .card{background:#12151c;border:1px solid #1e2530;border-radius:var(--radius);padding:var(--gap);}
+    .row{display:flex; gap:var(--gap); flex-wrap:wrap;}
+    .stack{display:flex; flex-direction:column; gap:10px;}
+    button, .btn {
+      background:#1a73e8; color:#fff; border:none; border-radius:10px; padding:12px 14px;
+      font-weight:600; font-size:0.95rem; cursor:pointer;
+    }
+    button.secondary{background:#2a2f3a;}
+    button:disabled{opacity:.55; cursor:not-allowed;}
+    input, select, textarea{
+      background:#0e1218; color:#e9edf3; border:1px solid #1e2530; padding:12px; border-radius:10px; width:100%;
+    }
+    label{font-size:.9rem; color:#a9b3c3;}
+    .muted{color:#95a1b5; font-size:.9rem;}
+    .success{color:#71dd7a;}
+    .warn{color:#ffcc66;}
+    .error{color:#ff7a7a;}
+    #reader{width:100%; min-height:320px; background:#0e1218; border:1px dashed #2a3240; border-radius:var(--radius);}
+    #product-details pre{white-space:pre-wrap;word-wrap:break-word;}
+    .list-item{border-top:1px dashed #273042; padding-top:10px; margin-top:10px;}
+    a{color:#8ab4ff; text-decoration:none;}
+    .pill{display:inline-block; font-size:.8rem; border:1px solid #2d3648; padding:4px 8px; border-radius:999px; margin-right:6px;}
+    footer{margin-top:28px; color:#8d98ab;}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Food Barcode → Word Doc</h1>
+  </header>
+
+  <main class="stack" aria-live="polite">
+    <section class="card stack" aria-label="Scanner">
+      <div class="stack">
+        <div class="muted">
+          Grant camera access when prompted. For best results, hold the barcode ~15–25cm away and keep it well lit.
+        </div>
+        <div id="reader" role="region" aria-label="Camera barcode scanner"></div>
+
+        <div class="row">
+          <div class="stack" style="flex:1; min-width: 220px;">
+            <label for="manual">Or type a barcode (EAN-13 / UPC-A / UPC-E / EAN-8)</label>
+            <div class="row">
+              <input id="manual" inputmode="numeric" pattern="[0-9]*" placeholder="e.g. 737628064502" />
+              <button id="manualGo" class="secondary">Lookup</button>
+            </div>
+          </div>
+
+          <div class="stack" style="flex:1; min-width: 220px;">
+            <label for="proxyToggle">CORS helper (only if you see a CORS error)</label>
+            <div class="row">
+              <select id="proxyToggle">
+                <option value="none">Direct (default)</option>
+                <option value="allorigins">Use allorigins.win proxy</option>
+              </select>
+              <button id="clearResults" class="secondary">Clear</button>
+            </div>
+          </div>
+        </div>
+        <div id="status" class="muted">Ready.</div>
+      </div>
+    </section>
+
+    <section class="card stack" aria-label="Latest scan result">
+      <h2 style="margin:0;font-size:1.05rem;">Latest product</h2>
+      <div id="product-details" class="stack">
+        <div class="muted">Scan a barcode to see details here.</div>
+      </div>
+      <div class="row">
+        <button id="addToList" disabled>Add to document list</button>
+      </div>
+    </section>
+
+    <section class="card stack" aria-label="Document queue">
+      <h2 style="margin:0;font-size:1.05rem;">Items to export</h2>
+      <div id="queue" class="stack muted">Nothing added yet.</div>
+      <div class="row">
+        <button id="exportDocx" disabled>Export Word (.docx)</button>
+        <button id="removeLast" class="secondary" disabled>Remove last</button>
+      </div>
+    </section>
+
+    <footer class="muted">
+      Data is fetched from Open Food Facts (open, community-maintained). Scanning runs entirely on your device.
+    </footer>
+  </main>
+
+  <script>
+    // --- Helpers & state ---
+    const state = {
+      lastDecoded: null,
+      lastTime: 0,
+      currentProduct: null,
+      queue: []
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const statusEl = $('status');
+    const detailsEl = $('product-details');
+    const queueEl = $('queue');
+    const addBtn = $('addToList');
+    const exportBtn = $('exportDocx');
+    const removeBtn = $('removeLast');
+
+    function setStatus(msg, cls="muted") {
+      statusEl.className = cls;
+      statusEl.textContent = msg;
+    }
+
+    function fmt(val) { return (val ?? "").toString().trim(); }
+    function asList(val) {
+      if (!val) return "";
+      if (Array.isArray(val)) return val.filter(Boolean).join(", ");
+      return String(val);
+    }
+
+    function offUrlFor(barcode) {
+      // Optional proxy to work around CORS if your browser/environment blocks direct calls.
+      const proxy = $('proxyToggle').value;
+      const endpoint = `https://world.openfoodfacts.org/api/v0/product/${barcode}.json`;
+      if (proxy === 'allorigins') {
+        // Note: allorigins is a public proxy. For production, prefer your own small proxy.
+        return `https://api.allorigins.win/raw?url=${encodeURIComponent(endpoint)}`;
+      }
+      return endpoint;
+    }
+
+    async function fetchProduct(barcode) {
+      setStatus(`Looking up ${barcode}...`);
+      const res = await fetch(offUrlFor(barcode), { mode: 'cors' }).catch(err => ({ ok:false, error: err }));
+      if (!res || !res.ok) {
+        throw new Error('Network or CORS error while contacting Open Food Facts.');
+      }
+      const json = await res.json();
+      if (json.status !== 1 || !json.product) {
+        throw new Error('Product not found in Open Food Facts.');
+      }
+      return normalizeProduct(json.product);
+    }
+
+    function normalizeProduct(p) {
+      const nutr = p.nutriments || {};
+      return {
+        code: fmt(p.code || p._id),
+        name: fmt(p.product_name || p.generic_name || 'Unknown'),
+        brands: fmt(p.brands),
+        quantity: fmt(p.quantity),
+        categories: fmt(p.categories),
+        ingredients_text: fmt(p.ingredients_text),
+        allergens: fmt(p.allergens || asList(p.allergens_tags)),
+        nutriscore: fmt(p.nutriscore_grade || p.nutrition_grades),
+        nova: fmt(p.nova_groups || p.nova_group),
+        ecoscore: fmt(p.ecoscore_grade),
+        url: fmt(p.url || `https://world.openfoodfacts.org/product/${fmt(p.code)}`),
+        image: fmt(p.image_front_url || p.image_url),
+        nutriments: {
+          'Energy (kcal/100g)': nutr['energy-kcal_100g'] ?? nutr['energy_100g'] ?? '',
+          'Fat (g/100g)': nutr['fat_100g'] ?? '',
+          'Saturated fat (g/100g)': nutr['saturated-fat_100g'] ?? '',
+          'Carbohydrates (g/100g)': nutr['carbohydrates_100g'] ?? '',
+          'Sugars (g/100g)': nutr['sugars_100g'] ?? '',
+          'Fiber (g/100g)': nutr['fiber_100g'] ?? '',
+          'Proteins (g/100g)': nutr['proteins_100g'] ?? '',
+          'Salt (g/100g)': nutr['salt_100g'] ?? '',
+          'Sodium (mg/100g)': nutr['sodium_100g'] ? Math.round((nutr['sodium_100g']*1000)) : ''
+        },
+        scannedAt: new Date().toISOString()
+      };
+    }
+
+    function renderProduct(p) {
+      detailsEl.innerHTML = '';
+      if (!p) {
+        detailsEl.innerHTML = '<div class="muted">Scan a barcode to see details here.</div>';
+        addBtn.disabled = true;
+        return;
+      }
+      const wrap = document.createElement('div');
+      wrap.className = 'stack';
+      wrap.innerHTML = `
+        <div class="row" style="align-items:center; justify-content:space-between;">
+          <div>
+            <div style="font-size:1.1rem;font-weight:700;">${p.name || 'Unknown'}${p.brands ? ' — ' + p.brands : ''}</div>
+            <div class="muted">Barcode: ${p.code} • ${p.quantity || '—'}</div>
+          </div>
+          ${p.nutriscore ? `<span class="pill">Nutri‑Score: ${p.nutriscore.toUpperCase()}</span>` : ''}
+          ${p.nova ? `<span class="pill">NOVA: ${p.nova}</span>` : ''}
+          ${p.ecoscore ? `<span class="pill">Eco‑Score: ${p.ecoscore.toUpperCase()}</span>` : ''}
+        </div>
+        ${p.image ? `<img alt="Product image" src="${p.image}" style="width:100%;max-height:220px;object-fit:contain;border-radius:10px;border:1px solid #1e2530;background:#0e1218;" />` : ''}
+        <div><strong>Ingredients:</strong> ${p.ingredients_text || '<span class="muted">—</span>'}</div>
+        <div><strong>Allergens:</strong> ${p.allergens || '<span class="muted">—</span>'}</div>
+        <div class="stack">
+          <strong>Nutrition (per 100g):</strong>
+          <div class="row">
+            ${Object.entries(p.nutriments).map(([k,v]) => `
+              <div class="pill">${k}: ${v !== '' ? v : '—'}</div>
+            `).join('')}
+          </div>
+        </div>
+        <div class="muted">Source: <a href="${p.url}" target="_blank" rel="noopener">Open Food Facts</a></div>
+      `;
+      detailsEl.appendChild(wrap);
+      addBtn.disabled = false;
+    }
+
+    function renderQueue() {
+      if (!state.queue.length) {
+        queueEl.textContent = 'Nothing added yet.';
+        exportBtn.disabled = true;
+        removeBtn.disabled = true;
+        return;
+      }
+      exportBtn.disabled = false;
+      removeBtn.disabled = false;
+      queueEl.innerHTML = state.queue.map((p, i) => `
+        <div class="list-item">
+          <div><strong>${i+1}. ${p.name || 'Unknown'}</strong> ${p.brands ? '— ' + p.brands : ''}</div>
+          <div class="muted">Barcode: ${p.code} • ${p.quantity || '—'} • Scanned: ${new Date(p.scannedAt).toLocaleString()}</div>
+        </div>
+      `).join('');
+    }
+
+    // --- Scanner setup (html5-qrcode) ---
+    const scanner = new Html5QrcodeScanner(
+      "reader",
+      {
+        fps: 12,
+        qrbox: { width: 320, height: 140 }, // wide box suits 1D barcodes
+        rememberLastUsedCamera: true,
+        // Use native BarcodeDetector if supported for speed (falls back to ZXing):
+        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+        // Limit to common retail barcodes for foods:
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.EAN_8,
+          Html5QrcodeSupportedFormats.UPC_A,
+          Html5QrcodeSupportedFormats.UPC_E
+        ]
+      },
+      false // verbose
+    );
+
+    async function onScanSuccess(decodedText, decodedResult) {
+      // Debounce duplicates
+      const now = Date.now();
+      if (decodedText === state.lastDecoded && now - state.lastTime < 2500) return;
+      state.lastDecoded = decodedText;
+      state.lastTime = now;
+
+      // Keep only digits in case of stray characters; accept 8/12/13-digit barcodes.
+      const digits = decodedText.replace(/\D/g, '');
+      if (!/^\d{8}$|^\d{12}$|^\d{13}$/.test(digits)) {
+        setStatus(`Scanned “${decodedText}” — not a supported EAN/UPC code.`, "warn");
+        return;
+      }
+      try {
+        const product = await fetchProduct(digits);
+        state.currentProduct = product;
+        renderProduct(product);
+        setStatus(`Found product for ${digits}.`, "success");
+      } catch (err) {
+        setStatus(err.message, "error");
+        state.currentProduct = null;
+        renderProduct(null);
+      }
+    }
+    function onScanError(errMsg) {
+      // Many benign errors happen while scanning; keep messages quiet.
+    }
+    scanner.render(onScanSuccess, onScanError);
+
+    // --- UI wiring ---
+    $('manualGo').addEventListener('click', async () => {
+      const digits = ($('manual').value || '').replace(/\D/g, '');
+      if (!digits) return setStatus('Enter a barcode to look up.', 'warn');
+      try {
+        const product = await fetchProduct(digits);
+        state.currentProduct = product;
+        renderProduct(product);
+        setStatus(`Found product for ${digits}.`, "success");
+      } catch (err) {
+        setStatus(err.message, "error");
+        state.currentProduct = null;
+        renderProduct(null);
+      }
+    });
+
+    $('clearResults').addEventListener('click', () => {
+      state.currentProduct = null;
+      renderProduct(null);
+      setStatus('Cleared.');
+    });
+
+    $('proxyToggle').addEventListener('change', () => {
+      setStatus('Proxy setting updated. Future lookups will use this method.');
+    });
+
+    $('addToList').addEventListener('click', () => {
+      if (!state.currentProduct) return;
+      state.queue.push(state.currentProduct);
+      renderQueue();
+      setStatus('Added to document list.', 'success');
+    });
+
+    $('removeLast').addEventListener('click', () => {
+      state.queue.pop();
+      renderQueue();
+      setStatus('Removed last item.');
+    });
+
+    $('exportDocx').addEventListener('click', async () => {
+      if (!state.queue.length) return;
+      if (!window.docx) {
+        setStatus('docx library failed to load.', 'error');
+        return;
+      }
+      const { Document, Packer, Paragraph, HeadingLevel, Table, TableRow, TableCell, WidthType, TextRun, ExternalHyperlink } = window.docx;
+
+      const sections = [];
+      sections.push(
+        new Paragraph({ text: 'Food Barcode Log', heading: HeadingLevel.TITLE }),
+        new Paragraph({ text: `Generated: ${new Date().toLocaleString()}` })
+      );
+
+      for (const p of state.queue) {
+        sections.push(new Paragraph({ text: '' })); // spacer
+        sections.push(new Paragraph({ text: `${p.name}${p.brands ? ' — ' + p.brands : ''}`, heading: HeadingLevel.HEADING_1 }));
+        sections.push(
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [
+              ['Barcode', p.code],
+              ['Quantity', p.quantity || ''],
+              ['Categories', p.categories || ''],
+              ['Allergens', p.allergens || ''],
+              ['Nutri‑Score', (p.nutriscore || '').toUpperCase()],
+              ['NOVA group', p.nova || ''],
+              ['Eco‑Score', (p.ecoscore || '').toUpperCase()],
+              ['Scanned at', new Date(p.scannedAt).toLocaleString()]
+            ].map(([k,v]) => new TableRow({
+              children: [
+                new TableCell({ children: [ new Paragraph({ text: k }) ] }),
+                new TableCell({ children: [ new Paragraph({ text: (v ?? '').toString() }) ] })
+              ]
+            }))
+          })
+        );
+
+        sections.push(new Paragraph({ text: '' })); // spacer
+        sections.push(new Paragraph({ text: 'Ingredients', heading: HeadingLevel.HEADING_2 }));
+        sections.push(new Paragraph({ text: p.ingredients_text || '—' }));
+
+        sections.push(new Paragraph({ text: '' })); // spacer
+        sections.push(new Paragraph({ text: 'Nutrition per 100g', heading: HeadingLevel.HEADING_2 }));
+        sections.push(
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: Object.entries(p.nutriments).map(([k,v]) => new TableRow({
+              children: [
+                new TableCell({ children: [ new Paragraph({ text: k }) ] }),
+                new TableCell({ children: [ new Paragraph({ text: (v === '' ? '—' : String(v)) }) ] })
+              ]
+            }))
+          })
+        );
+
+        sections.push(new Paragraph({ text: '' }));
+        sections.push(new Paragraph({
+          children: [
+            new TextRun({ text: 'Source: ' }),
+            new ExternalHyperlink({
+              children: [ new TextRun({ text: p.url, underline: {} }) ],
+              link: p.url
+            })
+          ]
+        }));
+      }
+
+      const doc = new Document({ sections: [{ children: sections }] });
+      const blob = await Packer.toBlob(doc);
+      const fname = `Food-Scans-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.docx`;
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = fname;
+      document.body.appendChild(a);
+      a.click();
+      URL.revokeObjectURL(a.href);
+      a.remove();
+      setStatus(`Exported ${state.queue.length} item(s) to ${fname}.`, 'success');
+    });
+
+    // Initial UI states
+    renderProduct(null);
+    renderQueue();
+  </script>
+</body>
+</html>
