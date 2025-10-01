@@ -5,10 +5,10 @@
   <meta
     name="viewport"
     content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"
-/>
+  />
   <title>Food Barcode → Word Doc</title>
   <meta name="theme-color" content="#111" />
-  <!-- html5-qrcode (camera scanning) -->
+  <!-- html5-qrcode (camera & file scanning) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js" integrity="sha512-cj6b5z6O3z0rQDT8X8pCD/Sie1qQhF7z04V7iSABtBTsWQiwk6sVv6gRy0hNwQLxVQXzO3mZf7ObxjhNR6N2Lw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <!-- docx (generate .docx in the browser) -->
   <script src="https://cdn.jsdelivr.net/npm/docx@9.5.1/build/index.js"></script>
@@ -52,9 +52,9 @@
     <section class="card stack" aria-label="Scanner">
       <div class="stack">
         <div class="muted">
-          Grant camera access when prompted. For best results, hold the barcode ~15–25cm away and keep it well lit.
+          Grant camera access when prompted. If there’s no camera, switch to the <strong>File</strong> tab inside the scanner and upload a barcode photo.
         </div>
-        <div id="reader" role="region" aria-label="Camera barcode scanner"></div>
+        <div id="reader" role="region" aria-label="Camera or file barcode scanner"></div>
 
         <div class="row">
           <div class="stack" style="flex:1; min-width: 220px;">
@@ -83,7 +83,7 @@
     <section class="card stack" aria-label="Latest scan result">
       <h2 style="margin:0;font-size:1.05rem;">Latest product</h2>
       <div id="product-details" class="stack">
-        <div class="muted">Scan a barcode to see details here.</div>
+        <div class="muted">Scan a barcode (camera or file) to see details here.</div>
       </div>
       <div class="row">
         <button id="addToList" disabled>Add to document list</button>
@@ -134,7 +134,7 @@
     }
 
     function offUrlFor(barcode) {
-      // Optional proxy to work around CORS if your browser/environment blocks direct calls.
+      // Optional proxy to work around CORS if the browser/environment blocks direct calls.
       const proxy = $('proxyToggle').value;
       const endpoint = `https://world.openfoodfacts.org/api/v0/product/${barcode}.json`;
       if (proxy === 'allorigins') {
@@ -190,7 +190,7 @@
     function renderProduct(p) {
       detailsEl.innerHTML = '';
       if (!p) {
-        detailsEl.innerHTML = '<div class="muted">Scan a barcode to see details here.</div>';
+        detailsEl.innerHTML = '<div class="muted">Scan a barcode (camera or file) to see details here.</div>';
         addBtn.disabled = true;
         return;
       }
@@ -202,9 +202,9 @@
             <div style="font-size:1.1rem;font-weight:700;">${p.name || 'Unknown'}${p.brands ? ' — ' + p.brands : ''}</div>
             <div class="muted">Barcode: ${p.code} • ${p.quantity || '—'}</div>
           </div>
-          ${p.nutriscore ? `<span class="pill">Nutri‑Score: ${p.nutriscore.toUpperCase()}</span>` : ''}
+          ${p.nutriscore ? `<span class="pill">Nutri-Score: ${p.nutriscore.toUpperCase()}</span>` : ''}
           ${p.nova ? `<span class="pill">NOVA: ${p.nova}</span>` : ''}
-          ${p.ecoscore ? `<span class="pill">Eco‑Score: ${p.ecoscore.toUpperCase()}</span>` : ''}
+          ${p.ecoscore ? `<span class="pill">Eco-Score: ${p.ecoscore.toUpperCase()}</span>` : ''}
         </div>
         ${p.image ? `<img alt="Product image" src="${p.image}" style="width:100%;max-height:220px;object-fit:contain;border-radius:10px;border:1px solid #1e2530;background:#0e1218;" />` : ''}
         <div><strong>Ingredients:</strong> ${p.ingredients_text || '<span class="muted">—</span>'}</div>
@@ -241,58 +241,75 @@
     }
 
     // --- Scanner setup (html5-qrcode) ---
-    const scanner = new Html5QrcodeScanner(
-      "reader",
-      {
-        fps: 12,
-        qrbox: { width: 320, height: 140 }, // wide box suits 1D barcodes
-        rememberLastUsedCamera: true,
-        // Use native BarcodeDetector if supported for speed (falls back to ZXing):
-        experimentalFeatures: { useBarCodeDetectorIfSupported: true },
-        // Limit to common retail barcodes for foods:
-        formatsToSupport: [
-          Html5QrcodeSupportedFormats.EAN_13,
-          Html5QrcodeSupportedFormats.EAN_8,
-          Html5QrcodeSupportedFormats.UPC_A,
-          Html5QrcodeSupportedFormats.UPC_E
-        ]
-      },
-      false // verbose
-    );
-
-    async function onScanSuccess(decodedText, decodedResult) {
-      // Debounce duplicates
-      const now = Date.now();
-      if (decodedText === state.lastDecoded && now - state.lastTime < 2500) return;
-      state.lastDecoded = decodedText;
-      state.lastTime = now;
-
-      // Keep only digits in case of stray characters; accept 8/12/13-digit barcodes.
-      const digits = decodedText.replace(/\D/g, '');
-      if (!/^\d{8}$|^\d{12}$|^\d{13}$/.test(digits)) {
-        setStatus(`Scanned “${decodedText}” — not a supported EAN/UPC code.`, "warn");
+    function initScanner() {
+      if (!window.Html5QrcodeScanner) {
+        setStatus('Scanner library failed to load.', 'error');
         return;
       }
-      try {
-        const product = await fetchProduct(digits);
-        state.currentProduct = product;
-        renderProduct(product);
-        setStatus(`Found product for ${digits}.`, "success");
-      } catch (err) {
-        setStatus(err.message, "error");
-        state.currentProduct = null;
-        renderProduct(null);
+
+      const scanner = new Html5QrcodeScanner(
+        "reader",
+        {
+          fps: 12,
+          qrbox: { width: 320, height: 140 }, // wide box suits 1D barcodes
+          rememberLastUsedCamera: true,
+          // Use native BarcodeDetector if supported for speed (falls back to ZXing):
+          experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+          // Limit to common retail barcodes for foods:
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.UPC_A,
+            Html5QrcodeSupportedFormats.UPC_E
+          ],
+          // 🔽 Enable file upload fallback when no camera is present:
+          supportedScanTypes: [
+            Html5QrcodeScanType.SCAN_TYPE_CAMERA,
+            Html5QrcodeScanType.SCAN_TYPE_FILE
+          ]
+        },
+        false // verbose
+      );
+
+      async function onScanSuccess(decodedText, decodedResult) {
+        // Debounce duplicates
+        const now = Date.now();
+        if (decodedText === state.lastDecoded && now - state.lastTime < 2500) return;
+        state.lastDecoded = decodedText;
+        state.lastTime = now;
+
+        // Keep only digits in case of stray characters; accept 8/12/13-digit barcodes.
+        const digits = decodedText.replace(/\D/g, '');
+        if (!/^\d{8}$|^\d{12}$|^\d{13}$/.test(digits)) {
+          setStatus(`Scanned “${decodedText}” — not a supported EAN/UPC code.`, "warn");
+          return;
+        }
+        try {
+          const product = await fetchProduct(digits);
+          state.currentProduct = product;
+          renderProduct(product);
+          setStatus(`Found product for ${digits}.`, "success");
+        } catch (err) {
+          setStatus(err.message, "error");
+          state.currentProduct = null;
+          renderProduct(null);
+        }
       }
+      function onScanError(_errMsg) {
+        // Many benign errors happen while scanning; keep messages quiet.
+      }
+
+      // Render the scanner UI (includes a Camera tab and a File tab)
+      scanner.render(onScanSuccess, onScanError);
     }
-    function onScanError(errMsg) {
-      // Many benign errors happen while scanning; keep messages quiet.
-    }
-    scanner.render(onScanSuccess, onScanError);
 
     // --- UI wiring ---
     $('manualGo').addEventListener('click', async () => {
       const digits = ($('manual').value || '').replace(/\D/g, '');
       if (!digits) return setStatus('Enter a barcode to look up.', 'warn');
+      if (!/^\d{8}$|^\d{12}$|^\d{13}$/.test(digits)) {
+        return setStatus('Please enter a valid EAN-8 / UPC-A / UPC-E / EAN-13 code.', 'warn');
+      }
       try {
         const product = await fetchProduct(digits);
         state.currentProduct = product;
@@ -353,9 +370,9 @@
               ['Quantity', p.quantity || ''],
               ['Categories', p.categories || ''],
               ['Allergens', p.allergens || ''],
-              ['Nutri‑Score', (p.nutriscore || '').toUpperCase()],
+              ['Nutri-Score', (p.nutriscore || '').toUpperCase()],
               ['NOVA group', p.nova || ''],
-              ['Eco‑Score', (p.ecoscore || '').toUpperCase()],
+              ['Eco-Score', (p.ecoscore || '').toUpperCase()],
               ['Scanned at', new Date(p.scannedAt).toLocaleString()]
             ].map(([k,v]) => new TableRow({
               children: [
@@ -409,9 +426,27 @@
       setStatus(`Exported ${state.queue.length} item(s) to ${fname}.`, 'success');
     });
 
-    // Initial UI states
+    // --- Environment checks & boot ---
     renderProduct(null);
     renderQueue();
+
+    // Warn if not secure context (camera usually blocked)
+    if (!(location.protocol === 'https:' || location.hostname === 'localhost')) {
+      setStatus('Tip: open this page over HTTPS or localhost to use the camera. File upload still works.', 'warn');
+    }
+
+    // Inform if no cameras are exposed (still OK thanks to file upload)
+    if (navigator.mediaDevices?.enumerateDevices) {
+      navigator.mediaDevices.enumerateDevices().then(devs => {
+        const cams = devs.filter(d => d.kind === 'videoinput');
+        if (cams.length === 0) {
+          setStatus('No cameras found. Use the File tab to upload a barcode image, or check OS/browser camera permissions.', 'warn');
+        }
+      }).catch(() => {});
+    }
+
+    // Initialize scanner UI (Camera + File tabs)
+    initScanner();
   </script>
 </body>
 </html>
