@@ -2,14 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta
-    name="viewport"
-    content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"
-  />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"/>
   <title>Food Barcode → Word Doc</title>
   <meta name="theme-color" content="#111" />
-  <!-- html5-qrcode (camera & file scanning) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js" integrity="sha512-cj6b5z6O3z0rQDT8X8pCD/Sie1qQhF7z04V7iSABtBTsWQiwk6sVv6gRy0hNwQLxVQXzO3mZf7ObxjhNR6N2Lw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <!-- docx (generate .docx in the browser) -->
   <script src="https://cdn.jsdelivr.net/npm/docx@9.5.1/build/index.js"></script>
   <style>
@@ -41,6 +36,7 @@
     a{color:#8ab4ff; text-decoration:none;}
     .pill{display:inline-block; font-size:.8rem; border:1px solid #2d3648; padding:4px 8px; border-radius:999px; margin-right:6px;}
     footer{margin-top:28px; color:#8d98ab;}
+    .badge{display:inline-flex; align-items:center; gap:8px; font-size:.8rem; padding:4px 8px; border:1px solid #2d3648; border-radius:999px;}
   </style>
 </head>
 <body>
@@ -50,34 +46,44 @@
 
   <main class="stack" aria-live="polite">
     <section class="card stack" aria-label="Scanner">
-      <div class="stack">
+      <div class="row" style="align-items:center; justify-content:space-between;">
         <div class="muted">
-          Grant camera access when prompted. If there’s no camera, switch to the <strong>File</strong> tab inside the scanner and upload a barcode photo.
+          Use **Camera** if available; otherwise use **File upload** or the manual box.
         </div>
-        <div id="reader" role="region" aria-label="Camera or file barcode scanner"></div>
-
-        <div class="row">
-          <div class="stack" style="flex:1; min-width: 220px;">
-            <label for="manual">Or type a barcode (EAN-13 / UPC-A / UPC-E / EAN-8)</label>
-            <div class="row">
-              <input id="manual" inputmode="numeric" pattern="[0-9]*" placeholder="e.g. 737628064502" />
-              <button id="manualGo" class="secondary">Lookup</button>
-            </div>
-          </div>
-
-          <div class="stack" style="flex:1; min-width: 220px;">
-            <label for="proxyToggle">CORS helper (only if you see a CORS error)</label>
-            <div class="row">
-              <select id="proxyToggle">
-                <option value="none">Direct (default)</option>
-                <option value="allorigins">Use allorigins.win proxy</option>
-              </select>
-              <button id="clearResults" class="secondary">Clear</button>
-            </div>
-          </div>
-        </div>
-        <div id="status" class="muted">Ready.</div>
+        <div id="modeBadge" class="badge muted">Loading scanner…</div>
       </div>
+      <div id="reader" role="region" aria-label="Camera or file barcode scanner"></div>
+
+      <!-- Lite mode (shown only if html5-qrcode fails entirely) -->
+      <div id="liteMode" class="stack" style="display:none;">
+        <div class="muted">Scanner library failed to load. Switched to <strong>Lite mode</strong> (file uploads only).</div>
+        <input id="liteFile" type="file" accept="image/*" />
+        <div class="row">
+          <button id="liteDecodeBtn" class="secondary">Decode from image</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="stack" style="flex:1; min-width: 220px;">
+          <label for="manual">Or type a barcode (EAN-13 / UPC-A / UPC-E / EAN-8)</label>
+          <div class="row">
+            <input id="manual" inputmode="numeric" pattern="[0-9]*" placeholder="e.g. 737628064502" />
+            <button id="manualGo" class="secondary">Lookup</button>
+          </div>
+        </div>
+
+        <div class="stack" style="flex:1; min-width: 220px;">
+          <label for="proxyToggle">CORS helper (only if you see a CORS error)</label>
+          <div class="row">
+            <select id="proxyToggle">
+              <option value="none">Direct (default)</option>
+              <option value="allorigins">Use allorigins.win proxy</option>
+            </select>
+            <button id="clearResults" class="secondary">Clear</button>
+          </div>
+        </div>
+      </div>
+      <div id="status" class="muted">Ready.</div>
     </section>
 
     <section class="card stack" aria-label="Latest scan result">
@@ -105,94 +111,66 @@
   </main>
 
   <script>
-    // --- Helpers & state ---
-    const state = {
-      lastDecoded: null,
-      lastTime: 0,
-      currentProduct: null,
-      queue: []
-    };
-
+    /***** Helpers & state *****/
+    const state = { lastDecoded:null, lastTime:0, currentProduct:null, queue:[] };
     const $ = (id) => document.getElementById(id);
-    const statusEl = $('status');
-    const detailsEl = $('product-details');
-    const queueEl = $('queue');
-    const addBtn = $('addToList');
-    const exportBtn = $('exportDocx');
-    const removeBtn = $('removeLast');
+    const statusEl = $('status'), detailsEl = $('product-details'), queueEl = $('queue');
+    const addBtn = $('addToList'), exportBtn = $('exportDocx'), removeBtn = $('removeLast');
+    const modeBadge = $('modeBadge');
 
-    function setStatus(msg, cls="muted") {
-      statusEl.className = cls;
-      statusEl.textContent = msg;
-    }
+    function setStatus(msg, cls="muted"){ statusEl.className = cls; statusEl.textContent = msg; }
+    function fmt(v){ return (v ?? "").toString().trim(); }
+    function asList(v){ if(!v) return ""; if(Array.isArray(v)) return v.filter(Boolean).join(", "); return String(v); }
 
-    function fmt(val) { return (val ?? "").toString().trim(); }
-    function asList(val) {
-      if (!val) return "";
-      if (Array.isArray(val)) return val.filter(Boolean).join(", ");
-      return String(val);
-    }
-
-    function offUrlFor(barcode) {
-      // Optional proxy to work around CORS if the browser/environment blocks direct calls.
+    function offUrlFor(barcode){
       const proxy = $('proxyToggle').value;
       const endpoint = `https://world.openfoodfacts.org/api/v0/product/${barcode}.json`;
-      if (proxy === 'allorigins') {
-        // Note: allorigins is a public proxy. For production, prefer your own small proxy.
-        return `https://api.allorigins.win/raw?url=${encodeURIComponent(endpoint)}`;
-      }
-      return endpoint;
+      return proxy === 'allorigins'
+        ? `https://api.allorigins.win/raw?url=${encodeURIComponent(endpoint)}`
+        : endpoint;
     }
 
-    async function fetchProduct(barcode) {
+    async function fetchProduct(barcode){
       setStatus(`Looking up ${barcode}...`);
-      const res = await fetch(offUrlFor(barcode), { mode: 'cors' }).catch(err => ({ ok:false, error: err }));
-      if (!res || !res.ok) {
-        throw new Error('Network or CORS error while contacting Open Food Facts.');
-      }
+      const res = await fetch(offUrlFor(barcode), { mode:'cors' }).catch(err => ({ ok:false, error:err }));
+      if (!res || !res.ok) throw new Error('Network or CORS error while contacting Open Food Facts.');
       const json = await res.json();
-      if (json.status !== 1 || !json.product) {
-        throw new Error('Product not found in Open Food Facts.');
-      }
+      if (json.status !== 1 || !json.product) throw new Error('Product not found in Open Food Facts.');
       return normalizeProduct(json.product);
     }
 
-    function normalizeProduct(p) {
-      const nutr = p.nutriments || {};
+    function normalizeProduct(p){
+      const n = p.nutriments || {};
       return {
         code: fmt(p.code || p._id),
         name: fmt(p.product_name || p.generic_name || 'Unknown'),
-        brands: fmt(p.brands),
-        quantity: fmt(p.quantity),
-        categories: fmt(p.categories),
-        ingredients_text: fmt(p.ingredients_text),
+        brands: fmt(p.brands), quantity: fmt(p.quantity),
+        categories: fmt(p.categories), ingredients_text: fmt(p.ingredients_text),
         allergens: fmt(p.allergens || asList(p.allergens_tags)),
         nutriscore: fmt(p.nutriscore_grade || p.nutrition_grades),
-        nova: fmt(p.nova_groups || p.nova_group),
-        ecoscore: fmt(p.ecoscore_grade),
+        nova: fmt(p.nova_groups || p.nova_group), ecoscore: fmt(p.ecoscore_grade),
         url: fmt(p.url || `https://world.openfoodfacts.org/product/${fmt(p.code)}`),
         image: fmt(p.image_front_url || p.image_url),
         nutriments: {
-          'Energy (kcal/100g)': nutr['energy-kcal_100g'] ?? nutr['energy_100g'] ?? '',
-          'Fat (g/100g)': nutr['fat_100g'] ?? '',
-          'Saturated fat (g/100g)': nutr['saturated-fat_100g'] ?? '',
-          'Carbohydrates (g/100g)': nutr['carbohydrates_100g'] ?? '',
-          'Sugars (g/100g)': nutr['sugars_100g'] ?? '',
-          'Fiber (g/100g)': nutr['fiber_100g'] ?? '',
-          'Proteins (g/100g)': nutr['proteins_100g'] ?? '',
-          'Salt (g/100g)': nutr['salt_100g'] ?? '',
-          'Sodium (mg/100g)': nutr['sodium_100g'] ? Math.round((nutr['sodium_100g']*1000)) : ''
+          'Energy (kcal/100g)': n['energy-kcal_100g'] ?? n['energy_100g'] ?? '',
+          'Fat (g/100g)': n['fat_100g'] ?? '',
+          'Saturated fat (g/100g)': n['saturated-fat_100g'] ?? '',
+          'Carbohydrates (g/100g)': n['carbohydrates_100g'] ?? '',
+          'Sugars (g/100g)': n['sugars_100g'] ?? '',
+          'Fiber (g/100g)': n['fiber_100g'] ?? '',
+          'Proteins (g/100g)': n['proteins_100g'] ?? '',
+          'Salt (g/100g)': n['salt_100g'] ?? '',
+          'Sodium (mg/100g)': n['sodium_100g'] ? Math.round(n['sodium_100g']*1000) : ''
         },
         scannedAt: new Date().toISOString()
       };
     }
 
-    function renderProduct(p) {
+    function renderProduct(p){
       detailsEl.innerHTML = '';
-      if (!p) {
+      if(!p){
         detailsEl.innerHTML = '<div class="muted">Scan a barcode (camera or file) to see details here.</div>';
-        addBtn.disabled = true;
-        return;
+        addBtn.disabled = true; return;
       }
       const wrap = document.createElement('div');
       wrap.className = 'stack';
@@ -212,241 +190,216 @@
         <div class="stack">
           <strong>Nutrition (per 100g):</strong>
           <div class="row">
-            ${Object.entries(p.nutriments).map(([k,v]) => `
-              <div class="pill">${k}: ${v !== '' ? v : '—'}</div>
-            `).join('')}
+            ${Object.entries(p.nutriments).map(([k,v]) => `<div class="pill">${k}: ${v!==''?v:'—'}</div>`).join('')}
           </div>
         </div>
-        <div class="muted">Source: <a href="${p.url}" target="_blank" rel="noopener">Open Food Facts</a></div>
-      `;
+        <div class="muted">Source: <a href="${p.url}" target="_blank" rel="noopener">Open Food Facts</a></div>`;
       detailsEl.appendChild(wrap);
       addBtn.disabled = false;
     }
 
-    function renderQueue() {
-      if (!state.queue.length) {
-        queueEl.textContent = 'Nothing added yet.';
-        exportBtn.disabled = true;
-        removeBtn.disabled = true;
-        return;
+    function renderQueue(){
+      if (!state.queue.length){
+        queueEl.textContent = 'Nothing added yet.'; exportBtn.disabled = true; removeBtn.disabled = true; return;
       }
-      exportBtn.disabled = false;
-      removeBtn.disabled = false;
-      queueEl.innerHTML = state.queue.map((p, i) => `
+      exportBtn.disabled = false; removeBtn.disabled = false;
+      queueEl.innerHTML = state.queue.map((p,i)=>`
         <div class="list-item">
           <div><strong>${i+1}. ${p.name || 'Unknown'}</strong> ${p.brands ? '— ' + p.brands : ''}</div>
           <div class="muted">Barcode: ${p.code} • ${p.quantity || '—'} • Scanned: ${new Date(p.scannedAt).toLocaleString()}</div>
-        </div>
-      `).join('');
+        </div>`).join('');
     }
 
-    // --- Scanner setup (html5-qrcode) ---
-    function initScanner() {
-      if (!window.Html5QrcodeScanner) {
-        setStatus('Scanner library failed to load.', 'error');
-        return;
-      }
+    /***** UI wiring *****/
+    $('manualGo').addEventListener('click', lookupManual);
+    $('clearResults').addEventListener('click', () => { state.currentProduct=null; renderProduct(null); setStatus('Cleared.'); });
+    $('proxyToggle').addEventListener('change', ()=> setStatus('Proxy setting updated. Future lookups will use this method.'));
+    $('addToList').addEventListener('click', ()=> { if(!state.currentProduct) return; state.queue.push(state.currentProduct); renderQueue(); setStatus('Added to document list.', 'success'); });
+    $('removeLast').addEventListener('click', ()=> { state.queue.pop(); renderQueue(); setStatus('Removed last item.'); });
+    $('exportDocx').addEventListener('click', exportDocx);
 
-      const scanner = new Html5QrcodeScanner(
-        "reader",
-        {
-          fps: 12,
-          qrbox: { width: 320, height: 140 }, // wide box suits 1D barcodes
-          rememberLastUsedCamera: true,
-          // Use native BarcodeDetector if supported for speed (falls back to ZXing):
-          experimentalFeatures: { useBarCodeDetectorIfSupported: true },
-          // Limit to common retail barcodes for foods:
-          formatsToSupport: [
-            Html5QrcodeSupportedFormats.EAN_13,
-            Html5QrcodeSupportedFormats.EAN_8,
-            Html5QrcodeSupportedFormats.UPC_A,
-            Html5QrcodeSupportedFormats.UPC_E
-          ],
-          // 🔽 Enable file upload fallback when no camera is present:
-          supportedScanTypes: [
-            Html5QrcodeScanType.SCAN_TYPE_CAMERA,
-            Html5QrcodeScanType.SCAN_TYPE_FILE
-          ]
-        },
-        false // verbose
-      );
-
-      async function onScanSuccess(decodedText, decodedResult) {
-        // Debounce duplicates
-        const now = Date.now();
-        if (decodedText === state.lastDecoded && now - state.lastTime < 2500) return;
-        state.lastDecoded = decodedText;
-        state.lastTime = now;
-
-        // Keep only digits in case of stray characters; accept 8/12/13-digit barcodes.
-        const digits = decodedText.replace(/\D/g, '');
-        if (!/^\d{8}$|^\d{12}$|^\d{13}$/.test(digits)) {
-          setStatus(`Scanned “${decodedText}” — not a supported EAN/UPC code.`, "warn");
-          return;
-        }
-        try {
-          const product = await fetchProduct(digits);
-          state.currentProduct = product;
-          renderProduct(product);
-          setStatus(`Found product for ${digits}.`, "success");
-        } catch (err) {
-          setStatus(err.message, "error");
-          state.currentProduct = null;
-          renderProduct(null);
-        }
-      }
-      function onScanError(_errMsg) {
-        // Many benign errors happen while scanning; keep messages quiet.
-      }
-
-      // Render the scanner UI (includes a Camera tab and a File tab)
-      scanner.render(onScanSuccess, onScanError);
+    async function lookupManual(){
+      const digits = ($('manual').value || '').replace(/\D/g,'');
+      if (!digits) return setStatus('Enter a barcode to look up.','warn');
+      if (!/^\d{8}$|^\d{12}$|^\d{13}$/.test(digits)) return setStatus('Enter a valid EAN-8 / UPC-A / UPC-E / EAN-13 code.','warn');
+      try{
+        const p = await fetchProduct(digits); state.currentProduct=p; renderProduct(p); setStatus(`Found product for ${digits}.`,'success');
+      }catch(err){ setStatus(err.message,'error'); state.currentProduct=null; renderProduct(null); }
     }
 
-    // --- UI wiring ---
-    $('manualGo').addEventListener('click', async () => {
-      const digits = ($('manual').value || '').replace(/\D/g, '');
-      if (!digits) return setStatus('Enter a barcode to look up.', 'warn');
-      if (!/^\d{8}$|^\d{12}$|^\d{13}$/.test(digits)) {
-        return setStatus('Please enter a valid EAN-8 / UPC-A / UPC-E / EAN-13 code.', 'warn');
-      }
-      try {
-        const product = await fetchProduct(digits);
-        state.currentProduct = product;
-        renderProduct(product);
-        setStatus(`Found product for ${digits}.`, "success");
-      } catch (err) {
-        setStatus(err.message, "error");
-        state.currentProduct = null;
-        renderProduct(null);
-      }
-    });
-
-    $('clearResults').addEventListener('click', () => {
-      state.currentProduct = null;
-      renderProduct(null);
-      setStatus('Cleared.');
-    });
-
-    $('proxyToggle').addEventListener('change', () => {
-      setStatus('Proxy setting updated. Future lookups will use this method.');
-    });
-
-    $('addToList').addEventListener('click', () => {
-      if (!state.currentProduct) return;
-      state.queue.push(state.currentProduct);
-      renderQueue();
-      setStatus('Added to document list.', 'success');
-    });
-
-    $('removeLast').addEventListener('click', () => {
-      state.queue.pop();
-      renderQueue();
-      setStatus('Removed last item.');
-    });
-
-    $('exportDocx').addEventListener('click', async () => {
+    async function exportDocx(){
       if (!state.queue.length) return;
-      if (!window.docx) {
-        setStatus('docx library failed to load.', 'error');
-        return;
-      }
-      const { Document, Packer, Paragraph, HeadingLevel, Table, TableRow, TableCell, WidthType, TextRun, ExternalHyperlink } = window.docx;
-
-      const sections = [];
-      sections.push(
-        new Paragraph({ text: 'Food Barcode Log', heading: HeadingLevel.TITLE }),
-        new Paragraph({ text: `Generated: ${new Date().toLocaleString()}` })
-      );
-
-      for (const p of state.queue) {
-        sections.push(new Paragraph({ text: '' })); // spacer
-        sections.push(new Paragraph({ text: `${p.name}${p.brands ? ' — ' + p.brands : ''}`, heading: HeadingLevel.HEADING_1 }));
-        sections.push(
-          new Table({
-            width: { size: 100, type: WidthType.PERCENTAGE },
-            rows: [
-              ['Barcode', p.code],
-              ['Quantity', p.quantity || ''],
-              ['Categories', p.categories || ''],
-              ['Allergens', p.allergens || ''],
-              ['Nutri-Score', (p.nutriscore || '').toUpperCase()],
-              ['NOVA group', p.nova || ''],
-              ['Eco-Score', (p.ecoscore || '').toUpperCase()],
-              ['Scanned at', new Date(p.scannedAt).toLocaleString()]
-            ].map(([k,v]) => new TableRow({
-              children: [
-                new TableCell({ children: [ new Paragraph({ text: k }) ] }),
-                new TableCell({ children: [ new Paragraph({ text: (v ?? '').toString() }) ] })
-              ]
-            }))
-          })
-        );
-
-        sections.push(new Paragraph({ text: '' })); // spacer
-        sections.push(new Paragraph({ text: 'Ingredients', heading: HeadingLevel.HEADING_2 }));
-        sections.push(new Paragraph({ text: p.ingredients_text || '—' }));
-
-        sections.push(new Paragraph({ text: '' })); // spacer
-        sections.push(new Paragraph({ text: 'Nutrition per 100g', heading: HeadingLevel.HEADING_2 }));
-        sections.push(
-          new Table({
-            width: { size: 100, type: WidthType.PERCENTAGE },
-            rows: Object.entries(p.nutriments).map(([k,v]) => new TableRow({
-              children: [
-                new TableCell({ children: [ new Paragraph({ text: k }) ] }),
-                new TableCell({ children: [ new Paragraph({ text: (v === '' ? '—' : String(v)) }) ] })
-              ]
-            }))
-          })
-        );
-
-        sections.push(new Paragraph({ text: '' }));
-        sections.push(new Paragraph({
-          children: [
-            new TextRun({ text: 'Source: ' }),
-            new ExternalHyperlink({
-              children: [ new TextRun({ text: p.url, underline: {} }) ],
-              link: p.url
-            })
-          ]
+      if (!window.docx) return setStatus('docx library failed to load.','error');
+      const { Document,Packer,Paragraph,HeadingLevel,Table,TableRow,TableCell,WidthType,TextRun,ExternalHyperlink } = window.docx;
+      const sections = [
+        new Paragraph({ text:'Food Barcode Log', heading:HeadingLevel.TITLE }),
+        new Paragraph({ text:`Generated: ${new Date().toLocaleString()}` })
+      ];
+      for (const p of state.queue){
+        sections.push(new Paragraph({ text:'' }));
+        sections.push(new Paragraph({ text:`${p.name}${p.brands?' — '+p.brands:''}`, heading:HeadingLevel.HEADING_1 }));
+        sections.push(new Table({
+          width:{ size:100, type:WidthType.PERCENTAGE },
+          rows:[
+            ['Barcode', p.code], ['Quantity', p.quantity||''], ['Categories', p.categories||''],
+            ['Allergens', p.allergens||''], ['Nutri-Score', (p.nutriscore||'').toUpperCase()],
+            ['NOVA group', p.nova||''], ['Eco-Score', (p.ecoscore||'').toUpperCase()],
+            ['Scanned at', new Date(p.scannedAt).toLocaleString()]
+          ].map(([k,v])=> new TableRow({ children:[
+            new TableCell({ children:[ new Paragraph({ text:k }) ] }),
+            new TableCell({ children:[ new Paragraph({ text:(v??'').toString() }) ] })
+          ]}))
         }));
+        sections.push(new Paragraph({ text:'' }));
+        sections.push(new Paragraph({ text:'Ingredients', heading:HeadingLevel.HEADING_2 }));
+        sections.push(new Paragraph({ text: p.ingredients_text || '—' }));
+        sections.push(new Paragraph({ text:'' }));
+        sections.push(new Paragraph({ text:'Nutrition per 100g', heading:HeadingLevel.HEADING_2 }));
+        sections.push(new Table({
+          width:{ size:100, type:WidthType.PERCENTAGE },
+          rows:Object.entries(p.nutriments).map(([k,v])=> new TableRow({ children:[
+            new TableCell({ children:[ new Paragraph({ text:k }) ] }),
+            new TableCell({ children:[ new Paragraph({ text: v==='' ? '—' : String(v) }) ] })
+          ]}))
+        }));
+        sections.push(new Paragraph({ text:'' }));
+        sections.push(new Paragraph({ children:[
+          new TextRun({ text:'Source: ' }),
+          new ExternalHyperlink({ children:[ new TextRun({ text:p.url, underline:{} }) ], link:p.url })
+        ]}));
       }
-
-      const doc = new Document({ sections: [{ children: sections }] });
+      const doc = new Document({ sections:[{ children:sections }] });
       const blob = await Packer.toBlob(doc);
       const fname = `Food-Scans-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.docx`;
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = fname;
-      document.body.appendChild(a);
-      a.click();
-      URL.revokeObjectURL(a.href);
-      a.remove();
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fname;
+      document.body.appendChild(a); a.click(); URL.revokeObjectURL(a.href); a.remove();
       setStatus(`Exported ${state.queue.length} item(s) to ${fname}.`, 'success');
-    });
-
-    // --- Environment checks & boot ---
-    renderProduct(null);
-    renderQueue();
-
-    // Warn if not secure context (camera usually blocked)
-    if (!(location.protocol === 'https:' || location.hostname === 'localhost')) {
-      setStatus('Tip: open this page over HTTPS or localhost to use the camera. File upload still works.', 'warn');
     }
 
-    // Inform if no cameras are exposed (still OK thanks to file upload)
-    if (navigator.mediaDevices?.enumerateDevices) {
-      navigator.mediaDevices.enumerateDevices().then(devs => {
-        const cams = devs.filter(d => d.kind === 'videoinput');
-        if (cams.length === 0) {
-          setStatus('No cameras found. Use the File tab to upload a barcode image, or check OS/browser camera permissions.', 'warn');
+    /***** Robust loader for html5-qrcode with fallbacks *****/
+    const CDN_TRIES = [
+      'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js',
+      'https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/minified/html5-qrcode.min.js',
+      'https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js'
+    ];
+
+    function loadScript(src){ return new Promise((resolve,reject)=>{ const s=document.createElement('script'); s.src=src; s.async=true; s.onload=resolve; s.onerror=reject; document.head.appendChild(s); }); }
+
+    async function loadHtml5QrcodeWithFallbacks(){
+      for (const url of CDN_TRIES){
+        try{ await loadScript(url); if (window.Html5QrcodeScanner) return true; }catch(e){}
+      }
+      return false;
+    }
+
+    /***** ZXing fallback (Lite mode: file upload only) *****/
+    async function ensureZXing(){
+      if (window.ZXing) return true;
+      try{
+        await loadScript('https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0');
+        return !!window.ZXing;
+      }catch(e){ return false; }
+    }
+
+    async function decodeWithZXingFromFile(file){
+      const codeReader = new ZXing.BrowserBarcodeReader();
+      // Prefer linear retail formats (EAN/UPC); ZXing auto-detects.
+      const img = URL.createObjectURL(file);
+      try{
+        const res = await codeReader.decodeFromImageUrl(img);
+        return res?.text || null;
+      }finally{
+        URL.revokeObjectURL(img);
+        codeReader.reset();
+      }
+    }
+
+    /***** Initialize scanner (html5-qrcode if possible, else Lite mode) *****/
+    async function init(){
+      renderProduct(null); renderQueue();
+
+      // Environment hint
+      if (!(location.protocol === 'https:' || location.hostname === 'localhost')) {
+        setStatus('Tip: open over HTTPS or localhost for camera access. File upload still works.', 'warn');
+      }
+
+      const loaded = await loadHtml5QrcodeWithFallbacks();
+
+      if (loaded && window.Html5QrcodeScanner){
+        modeBadge.textContent = 'Scanner: html5-qrcode';
+        const scanner = new Html5QrcodeScanner(
+          "reader",
+          {
+            fps: 12,
+            qrbox: { width: 320, height: 140 },
+            rememberLastUsedCamera: true,
+            experimentalFeatures: { useBarCodeDetectorIfSupported: true },
+            formatsToSupport: [
+              Html5QrcodeSupportedFormats.EAN_13,
+              Html5QrcodeSupportedFormats.EAN_8,
+              Html5QrcodeSupportedFormats.UPC_A,
+              Html5QrcodeSupportedFormats.UPC_E
+            ],
+            supportedScanTypes: [
+              Html5QrcodeScanType.SCAN_TYPE_CAMERA,
+              Html5QrcodeScanType.SCAN_TYPE_FILE
+            ]
+          },
+          false
+        );
+
+        async function onScanSuccess(decodedText){
+          const now = Date.now();
+          if (decodedText === state.lastDecoded && now - state.lastTime < 2500) return;
+          state.lastDecoded = decodedText; state.lastTime = now;
+          const digits = decodedText.replace(/\D/g,'');
+          if (!/^\d{8}$|^\d{12}$|^\d{13}$/.test(digits)) return setStatus(`Scanned “${decodedText}” — not a supported EAN/UPC code.`,'warn');
+          try{
+            const p = await fetchProduct(digits); state.currentProduct=p; renderProduct(p); setStatus(`Found product for ${digits}.`,'success');
+          }catch(err){ setStatus(err.message,'error'); state.currentProduct=null; renderProduct(null); }
         }
-      }).catch(() => {});
+        function onScanError(_err){ /* ignore noisy scan errors */ }
+
+        // Optional: tell user if no cameras are exposed
+        if (navigator.mediaDevices?.enumerateDevices) {
+          navigator.mediaDevices.enumerateDevices().then(devs=>{
+            const cams = devs.filter(d=>d.kind==='videoinput');
+            if (cams.length===0) setStatus('No cameras found. Use the File tab or check OS/browser permissions.', 'warn');
+          }).catch(()=>{});
+        }
+
+        scanner.render(onScanSuccess, onScanError);
+        return;
+      }
+
+      // ---- Lite mode: html5-qrcode failed to load; use ZXing for file uploads ----
+      const hasZX = await ensureZXing();
+      $('liteMode').style.display = hasZX ? 'flex' : 'none';
+      modeBadge.textContent = hasZX ? 'Scanner: Lite mode (file only)' : 'Scanner: unavailable';
+      if (!hasZX){
+        setStatus('Could not load scanner libraries from any CDN. Manual entry still works.', 'error');
+        return;
+      }
+      setStatus('Scanner library failed to load. Using Lite mode (upload an image of the barcode).', 'warn');
+
+      $('liteDecodeBtn').addEventListener('click', async ()=>{
+        const f = $('liteFile').files?.[0];
+        if (!f) return setStatus('Choose an image first.','warn');
+        setStatus('Decoding image…');
+        try{
+          const decoded = await decodeWithZXingFromFile(f);
+          if (!decoded) return setStatus('No barcode detected in the image. Try a sharper, closer photo with good lighting.','warn');
+          const digits = decoded.replace(/\D/g,'');
+          if (!/^\d{8}$|^\d{12}$|^\d{13}$/.test(digits)) return setStatus(`Decoded “${decoded}” — not a supported EAN/UPC code.`, 'warn');
+          const p = await fetchProduct(digits); state.currentProduct=p; renderProduct(p);
+          setStatus(`Found product for ${digits}.`, 'success');
+        }catch(e){
+          setStatus('Failed to decode / fetch product from the image.', 'error');
+        }
+      });
     }
 
-    // Initialize scanner UI (Camera + File tabs)
-    initScanner();
+    window.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
 </html>
