@@ -5,123 +5,93 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"/>
   <title>Food Barcode → Word Doc</title>
   <meta name="theme-color" content="#111" />
-  <!-- docx (generate .docx in the browser) -->
   <script src="https://cdn.jsdelivr.net/npm/docx@9.5.1/build/index.js"></script>
   <style>
     :root { --gap: 14px; --radius: 12px; }
     html,body{margin:0;background:#0f1115;color:#f5f6f8;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;}
-    header{padding:18px var(--gap); background:#0a0c10; position:sticky; top:0; z-index:3; border-bottom:1px solid #1c212b;}
+    header{padding:18px var(--gap); background:#0a0c10; position:sticky; top:0; z-index:4; border-bottom:1px solid #1c212b;}
     h1{font-size:1.15rem; margin:0;}
     main{padding:var(--gap);}
     .card{background:#12151c;border:1px solid #1e2530;border-radius:var(--radius);padding:var(--gap);}
     .row{display:flex; gap:var(--gap); flex-wrap:wrap;}
     .stack{display:flex; flex-direction:column; gap:10px;}
-    button, .btn {
-      background:#1a73e8; color:#fff; border:none; border-radius:10px; padding:12px 14px;
-      font-weight:600; font-size:0.95rem; cursor:pointer;
-    }
+    button { background:#1a73e8; color:#fff; border:none; border-radius:10px; padding:12px 14px; font-weight:600; font-size:0.95rem; cursor:pointer; }
     button.secondary{background:#2a2f3a;}
     button.ghost{background:transparent;border:1px solid #2a2f3a;}
     button:disabled{opacity:.55; cursor:not-allowed;}
-    input, select{
-      background:#0e1218; color:#e9edf3; border:1px solid #1e2530; padding:12px; border-radius:10px; width:100%;
-    }
+    input, select{ background:#0e1218; color:#e9edf3; border:1px solid #1e2530; padding:12px; border-radius:10px; width:100%; }
     label{font-size:.9rem; color:#a9b3c3;}
     .muted{color:#95a1b5; font-size:.9rem;}
-    .success{color:#71dd7a;}
-    .warn{color:#ffcc66;}
-    .error{color:#ff7a7a;}
-    #reader{width:100%; min-height:320px; background:#0e1218; border:1px dashed #2a3240; border-radius:var(--radius); position:relative;}
-    #product-details pre{white-space:pre-wrap;word-wrap:break-word;}
-    .list-item{border-top:1px dashed #273042; padding-top:10px; margin-top:10px;}
+    .success{color:#71dd7a;} .warn{color:#ffcc66;} .error{color:#ff7a7a;}
     a{color:#8ab4ff; text-decoration:none;}
-    .pill{display:inline-block; font-size:.8rem; border:1px solid #2d3648; padding:4px 8px; border-radius:999px; margin-right:6px;}
-    footer{margin-top:28px; color:#8d98ab;}
+    .pill{display:inline-flex; gap:6px; align-items:center; font-size:.85rem; border:1px solid #2d3648; padding:6px 10px; border-radius:999px;}
     .badge{display:inline-flex; align-items:center; gap:8px; font-size:.8rem; padding:4px 8px; border:1px solid #2d3648; border-radius:999px;}
-    /* Camera toolbar */
-    .toolbar{display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
-    .tabs{display:flex; gap:6px; margin-bottom:8px;}
-    .tab{padding:8px 10px; border:1px solid #2d3648; border-radius:999px; cursor:pointer; font-size:.9rem;}
-    .tab.active{background:#1a73e8;border-color:#1a73e8;color:#fff;}
+    #reader{width:100%; min-height:320px; background:#0e1218; border:1px dashed #2a3240; border-radius:var(--radius); position:relative;}
+    .list-item{border-top:1px dashed #273042; padding-top:10px; margin-top:10px;}
+    footer{margin-top:28px; color:#8d98ab;}
     /* Toast */
     #toast{position:fixed; left:50%; transform:translateX(-50%); bottom:24px; background:#1b2332; border:1px solid #2a3242; color:#e9edf3; padding:12px 14px; border-radius:10px; box-shadow:0 6px 30px rgba(0,0,0,.35); z-index:5; opacity:0; pointer-events:none; transition:opacity .25s, bottom .25s;}
     #toast.show{opacity:1; bottom:34px;}
-    /* Goals grid */
+    /* Modal */
+    .modal-backdrop{position:fixed; inset:0; background:rgba(0,0,0,.55); display:flex; align-items:center; justify-content:center; z-index:6;}
+    .modal{background:#12151c; border:1px solid #1e2530; border-radius:14px; width:min(600px,92vw); padding:18px;}
+    .modal h3{margin:0 0 8px 0; font-size:1.1rem;}
     .grid{display:grid; gap:10px;}
-    @media(min-width:700px){ .grid-cols-3{ grid-template-columns: repeat(3, 1fr); } .grid-cols-2{ grid-template-columns: repeat(2, 1fr); } }
+    @media(min-width:700px){ .grid-cols-2{ grid-template-columns: repeat(2, 1fr); } }
+    /* Progress bars */
+    .bar{height:8px; background:#1c2433; border-radius:999px; overflow:hidden;}
+    .bar>span{display:block; height:100%; background:#1a73e8; width:0%;}
   </style>
 </head>
 <body>
-  <header>
-    <h1>Food Barcode → Word Doc</h1>
-  </header>
+  <header><h1>Food Barcode → Word Doc</h1></header>
 
   <main class="stack" aria-live="polite">
-    <!-- Goals -->
-    <section class="card stack" aria-label="Nutrition goals">
-      <h2 style="margin:0;font-size:1.05rem;">Your Nutrition Goals</h2>
-      <div class="grid grid-cols-3">
-        <div class="stack">
-          <label for="weight">Body weight (kg)</label>
-          <input id="weight" type="number" min="30" max="300" step="0.1" placeholder="e.g. 75" />
+    <!-- Targets & today progress -->
+    <section class="card stack" aria-label="Daily Targets">
+      <h2 style="margin:0;font-size:1.05rem;">Today’s Targets & Progress</h2>
+      <div id="targets" class="row" style="gap:10px;flex-wrap:wrap;"></div>
+      <div class="stack">
+        <div class="row">
+          <div style="flex:1;min-width:220px;">
+            <div class="row" style="justify-content:space-between;"><span class="muted">Calories</span><span id="calTxt" class="muted">0 / 0</span></div>
+            <div class="bar"><span id="calBar"></span></div>
+          </div>
+          <div style="flex:1;min-width:220px;">
+            <div class="row" style="justify-content:space-between;"><span class="muted">Protein (g)</span><span id="proTxt" class="muted">0 / 0</span></div>
+            <div class="bar"><span id="proBar"></span></div>
+          </div>
         </div>
-        <div class="stack">
-          <label for="goalType">Goal</label>
-          <select id="goalType">
-            <option value="lose">Lose</option>
-            <option value="maintain" selected>Maintain</option>
-            <option value="gain">Gain</option>
-          </select>
-        </div>
-        <div class="stack">
-          <label for="calTarget">Daily calorie target (kcal)</label>
-          <input id="calTarget" type="number" min="800" max="5000" step="10" placeholder="e.g. 2200" />
-        </div>
-      </div>
-      <div class="grid grid-cols-2">
-        <div class="stack">
-          <label for="proteinPerKg">Protein factor (g/kg)</label>
-          <input id="proteinPerKg" type="number" min="1.2" max="2.6" step="0.1" value="1.8" />
-          <div class="muted">Tip: 1.6–2.2 g/kg is a common range.</div>
-        </div>
-        <div class="stack">
-          <label for="fatPct">Fat share (% of calories)</label>
-          <input id="fatPct" type="number" min="20" max="40" step="1" value="30" />
+        <div class="row">
+          <div style="flex:1;min-width:220px;">
+            <div class="row" style="justify-content:space-between;"><span class="muted">Fat (g)</span><span id="fatTxt" class="muted">0 / 0</span></div>
+            <div class="bar"><span id="fatBar"></span></div>
+          </div>
+          <div style="flex:1;min-width:220px;">
+            <div class="row" style="justify-content:space-between;"><span class="muted">Carbs (g)</span><span id="carbTxt" class="muted">0 / 0</span></div>
+            <div class="bar"><span id="carbBar"></span></div>
+          </div>
         </div>
       </div>
-      <div class="row">
-        <button id="calcGoals">Calculate targets</button>
-        <div id="goalStatus" class="muted">Enter values and click Calculate.</div>
-      </div>
-      <div id="goalsOut" class="row" style="gap:10px; flex-wrap:wrap;">
-        <!-- Pills injected here -->
-      </div>
+      <div id="goalHint" class="muted">We’ll ask your weight and goal the first time to set these.</div>
     </section>
 
     <!-- Scanner -->
     <section class="card stack" aria-label="Scanner">
       <div class="row" style="align-items:center; justify-content:space-between;">
-        <div class="muted">Use **Camera** if available; otherwise **File upload** or manual entry.</div>
-        <div id="modeBadge" class="badge muted">Loading scanner…</div>
+        <div class="muted">Use Camera if available; otherwise File upload or manual entry.</div>
+        <div id="modeBadge" class="badge muted">Scanner: Ready</div>
       </div>
 
-      <div class="tabs" role="tablist" aria-label="Scan mode">
-        <div id="tabCamera" class="tab active" role="tab" aria-selected="true">Camera</div>
-        <div id="tabFile" class="tab" role="tab" aria-selected="false">File</div>
+      <div class="tabs row" role="tablist" aria-label="Scan mode" style="gap:8px;">
+        <button id="startCam" class="ghost">Start camera</button>
+        <button id="flipCam" class="ghost" disabled>Flip camera</button>
+        <button id="stopCam" class="ghost" disabled>Stop</button>
       </div>
 
-      <!-- Camera pane -->
-      <div id="paneCamera" class="stack">
-        <div class="toolbar">
-          <button id="startCam" class="ghost">Start camera</button>
-          <button id="flipCam" class="ghost" disabled>Flip camera</button>
-          <button id="stopCam" class="ghost" disabled>Stop</button>
-        </div>
-        <div id="reader" role="region" aria-label="Camera barcode scanner"></div>
-      </div>
+      <div id="reader" role="region" aria-label="Camera or file barcode scanner"></div>
 
-      <!-- File pane -->
-      <div id="paneFile" class="stack" style="display:none;">
+      <div class="stack">
         <input id="fileInput" type="file" accept="image/*" />
         <div class="row">
           <button id="fileDecode" class="secondary">Decode from image</button>
@@ -132,9 +102,7 @@
       <div id="liteMode" class="stack" style="display:none;">
         <div class="muted">Scanner library failed to load. Switched to <strong>Lite mode</strong> (file uploads only).</div>
         <input id="liteFile" type="file" accept="image/*" />
-        <div class="row">
-          <button id="liteDecodeBtn" class="secondary">Decode from image</button>
-        </div>
+        <div class="row"><button id="liteDecodeBtn" class="secondary">Decode from image</button></div>
       </div>
 
       <div class="row">
@@ -189,38 +157,59 @@
   <!-- Toast -->
   <div id="toast" role="status" aria-live="assertive"></div>
 
+  <!-- Onboarding Modal -->
+  <div id="onboard" class="modal-backdrop" style="display:none;">
+    <div class="modal">
+      <h3>Set your starting point</h3>
+      <div class="grid grid-cols-2">
+        <div class="stack">
+          <label for="obWeight">Your current weight (kg)</label>
+          <input id="obWeight" type="number" min="30" max="300" step="0.1" placeholder="e.g. 75">
+        </div>
+        <div class="stack">
+          <label for="obGoalWeight">Your goal weight (kg)</label>
+          <input id="obGoalWeight" type="number" min="30" max="300" step="0.1" placeholder="e.g. 70">
+        </div>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <button id="obSave">Save & set goals</button>
+        <button id="obSkip" class="secondary">Skip (you can enter later)</button>
+      </div>
+      <div id="obMsg" class="muted">We’ll estimate calories and macros automatically.</div>
+    </div>
+  </div>
+
   <script>
-    /***** Helpers & state *****/
+    /***** State *****/
     const state = {
       lastDecoded:null, lastTime:0,
       currentProduct:null, queue:[],
-      // camera
-      html5Qrcode: null,
-      camFacing: 'environment', // 'environment' | 'user'
-      html5Loaded: false,
+      html5Qrcode: null, html5Loaded: false, camFacing:'environment',
+      goals: { calories:0, proteinG:0, fatG:0, carbsG:0 },
+      today: { calories:0, proteinG:0, fatG:0, carbsG:0 }
     };
 
+    /***** DOM refs *****/
     const $ = (id) => document.getElementById(id);
     const statusEl = $('status'), detailsEl = $('product-details'), queueEl = $('queue');
     const addBtn = $('addToList'), exportBtn = $('exportDocx'), removeBtn = $('removeLast');
     const modeBadge = $('modeBadge'), toastEl = $('toast');
+    const calBar = $('calBar'), proBar = $('proBar'), fatBar = $('fatBar'), carbBar = $('carbBar');
+    const calTxt = $('calTxt'), proTxt = $('proTxt'), fatTxt = $('fatTxt'), carbTxt = $('carbTxt'), targetsWrap = $('targets'), goalHint = $('goalHint');
 
+    /***** UI helpers *****/
     function setStatus(msg, cls="muted"){ statusEl.className = cls; statusEl.textContent = msg; }
-    function toast(msg){
-      toastEl.textContent = msg;
-      toastEl.classList.add('show');
-      if (navigator.vibrate) try{ navigator.vibrate(40); }catch(_){}
-      setTimeout(()=> toastEl.classList.remove('show'), 2200);
-    }
+    function toast(msg){ toastEl.textContent = msg; toastEl.classList.add('show'); if (navigator.vibrate) try{navigator.vibrate(40);}catch{}; setTimeout(()=>toastEl.classList.remove('show'), 2200); }
     function fmt(v){ return (v ?? "").toString().trim(); }
     function asList(v){ if(!v) return ""; if(Array.isArray(v)) return v.filter(Boolean).join(", "); return String(v); }
+    function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
+    function pct(n,d){ if(!d) return 0; return clamp(Math.round((n/d)*100), 0, 100); }
 
+    /***** OFF API helpers *****/
     function offUrlFor(barcode){
       const proxy = $('proxyToggle').value;
       const endpoint = `https://world.openfoodfacts.org/api/v0/product/${barcode}.json`;
-      return proxy === 'allorigins'
-        ? `https://api.allorigins.win/raw?url=${encodeURIComponent(endpoint)}`
-        : endpoint;
+      return proxy === 'allorigins' ? `https://api.allorigins.win/raw?url=${encodeURIComponent(endpoint)}` : endpoint;
     }
 
     async function fetchProduct(barcode){
@@ -234,6 +223,7 @@
 
     function normalizeProduct(p){
       const n = p.nutriments || {};
+      const kcal100 = n['energy-kcal_100g'] ?? n['energy_100g'] ?? null;
       return {
         code: fmt(p.code || p._id),
         name: fmt(p.product_name || p.generic_name || 'Unknown'),
@@ -244,21 +234,22 @@
         nova: fmt(p.nova_groups || p.nova_group), ecoscore: fmt(p.ecoscore_grade),
         url: fmt(p.url || `https://world.openfoodfacts.org/product/${fmt(p.code)}`),
         image: fmt(p.image_front_url || p.image_url),
-        nutriments: {
-          'Energy (kcal/100g)': n['energy-kcal_100g'] ?? n['energy_100g'] ?? '',
-          'Fat (g/100g)': n['fat_100g'] ?? '',
-          'Saturated fat (g/100g)': n['saturated-fat_100g'] ?? '',
-          'Carbohydrates (g/100g)': n['carbohydrates_100g'] ?? '',
-          'Sugars (g/100g)': n['sugars_100g'] ?? '',
-          'Fiber (g/100g)': n['fiber_100g'] ?? '',
-          'Proteins (g/100g)': n['proteins_100g'] ?? '',
-          'Salt (g/100g)': n['salt_100g'] ?? '',
-          'Sodium (mg/100g)': n['sodium_100g'] ? Math.round(n['sodium_100g']*1000) : ''
+        per100: {
+          kcal: kcal100 != null ? Number(kcal100) : null,
+          fat: n['fat_100g'] ?? null,
+          sat: n['saturated-fat_100g'] ?? null,
+          carbs: n['carbohydrates_100g'] ?? null,
+          sugars: n['sugars_100g'] ?? null,
+          fiber: n['fiber_100g'] ?? null,
+          protein: n['proteins_100g'] ?? null,
+          salt: n['salt_100g'] ?? null,
+          sodium_mg: n['sodium_100g'] ? Math.round(n['sodium_100g']*1000) : null
         },
         scannedAt: new Date().toISOString()
       };
     }
 
+    /***** Renderers *****/
     function renderProduct(p){
       detailsEl.innerHTML = '';
       if(!p){
@@ -267,6 +258,17 @@
       }
       const wrap = document.createElement('div');
       wrap.className = 'stack';
+      const nutrPills = [
+        ['Energy (kcal/100g)', p.per100.kcal],
+        ['Fat (g/100g)', p.per100.fat],
+        ['Saturated fat', p.per100.sat],
+        ['Carbohydrates', p.per100.carbs],
+        ['Sugars', p.per100.sugars],
+        ['Fiber', p.per100.fiber],
+        ['Proteins', p.per100.protein],
+        ['Salt (g/100g)', p.per100.salt],
+        ['Sodium (mg/100g)', p.per100.sodium_mg]
+      ].map(([k,v])=> `<div class="pill">${k}: ${v==null?'—':v}</div>`).join('');
       wrap.innerHTML = `
         <div class="row" style="align-items:center; justify-content:space-between;">
           <div>
@@ -282,9 +284,7 @@
         <div><strong>Allergens:</strong> ${p.allergens || '<span class="muted">—</span>'}</div>
         <div class="stack">
           <strong>Nutrition (per 100g):</strong>
-          <div class="row">
-            ${Object.entries(p.nutriments).map(([k,v]) => `<div class="pill">${k}: ${v!==''?v:'—'}</div>`).join('')}
-          </div>
+          <div class="row">${nutrPills}</div>
         </div>
         <div class="muted">Source: <a href="${p.url}" target="_blank" rel="noopener">Open Food Facts</a></div>`;
       detailsEl.appendChild(wrap);
@@ -299,58 +299,100 @@
       queueEl.innerHTML = state.queue.map((p,i)=>`
         <div class="list-item">
           <div><strong>${i+1}. ${p.name || 'Unknown'}</strong> ${p.brands ? '— ' + p.brands : ''}</div>
-          <div class="muted">Barcode: ${p.code} • ${p.quantity || '—'} • Scanned: ${new Date(p.scannedAt).toLocaleString()}</div>
+          <div class="muted">Barcode: ${p.code} • ${p.quantity || '—'} • Amount: ${p.amountG ?? '—'} g • Logged: ${new Date(p.scannedAt).toLocaleString()}</div>
+          <div class="muted">Adds: ${fmtAdds(p.adds)}</div>
         </div>`).join('');
     }
+    function fmtAdds(a){ if(!a) return '—'; return `${a.kcal} kcal, P ${a.proteinG}g, F ${a.fatG}g, C ${a.carbsG}g`; }
 
-    /***** Goals calculator *****/
-    const weightEl = $('weight'), goalTypeEl = $('goalType'), calTargetEl = $('calTarget');
-    const proteinPerKgEl = $('proteinPerKg'), fatPctEl = $('fatPct'), goalStatus = $('goalStatus'), goalsOut = $('goalsOut');
-    $('calcGoals').addEventListener('click', calcGoals);
-
-    function calcGoals(){
-      const weight = parseFloat(weightEl.value);
-      const goal = goalTypeEl.value;
-      let cals = parseFloat(calTargetEl.value);
-      const ppk = Math.max(1.0, Math.min(3.5, parseFloat(proteinPerKgEl.value) || 1.8));
-      const fatPct = Math.max(15, Math.min(50, parseFloat(fatPctEl.value) || 30));
-
-      if (!weight || weight < 30 || weight > 300){ goalStatus.textContent = 'Enter a valid weight (30–300kg).'; goalStatus.className='warn'; return; }
-      if (!cals || cals < 800 || cals > 5000){
-        // If calories not supplied, suggest a rough start point ~ 30 * kg and adjust by goal
-        const base = 30 * weight;
-        const adj = goal==='lose' ? -300 : goal==='gain' ? +300 : 0;
-        cals = Math.round(base + adj);
-        calTargetEl.value = cals;
-      }
-
-      // Protein target from weight
-      const proteinG = Math.round(ppk * weight);
-      const proteinCals = proteinG * 4;
-
-      // Fat target as % of calories
-      const fatCals = Math.round(cals * (fatPct/100));
-      const fatG = Math.round(fatCals / 9);
-
-      // Carbs = remaining
-      const carbCals = Math.max(0, cals - proteinCals - fatCals);
-      const carbG = Math.round(carbCals / 4);
-
-      goalsOut.innerHTML = `
-        <span class="pill">Calories: <strong>${cals} kcal</strong></span>
-        <span class="pill">Protein: <strong>${proteinG} g</strong></span>
-        <span class="pill">Fat: <strong>${fatG} g</strong> (${fatPct}%)</span>
-        <span class="pill">Carbs: <strong>${carbG} g</strong></span>
+    function renderTargets(){
+      const g = state.goals, t = state.today;
+      targetsWrap.innerHTML = `
+        <span class="pill">Calories target: <strong>${g.calories||0}</strong></span>
+        <span class="pill">Protein: <strong>${g.proteinG||0} g</strong></span>
+        <span class="pill">Fat: <strong>${g.fatG||0} g</strong></span>
+        <span class="pill">Carbs: <strong>${g.carbsG||0} g</strong></span>
       `;
-      goalStatus.textContent = 'Targets calculated.'; goalStatus.className='success';
+      calBar.style.width = pct(t.calories, g.calories) + '%';
+      proBar.style.width = pct(t.proteinG, g.proteinG) + '%';
+      fatBar.style.width = pct(t.fatG, g.fatG) + '%';
+      carbBar.style.width = pct(t.carbsG, g.carbsG) + '%';
+      calTxt.textContent = `${t.calories} / ${g.calories}`;
+      proTxt.textContent = `${t.proteinG} / ${g.proteinG}`;
+      fatTxt.textContent = `${t.fatG} / ${g.fatG}`;
+      carbTxt.textContent = `${t.carbsG} / ${g.carbsG}`;
+      goalHint.style.display = g.calories ? 'none' : 'block';
     }
 
-    /***** UI wiring *****/
+    /***** Goal math from weight + goal weight *****/
+    function deriveGoals(currentKg, goalKg){
+      const maintain = Math.round(currentKg * 30); // simple maintenance estimate
+      const diff = goalKg - currentKg; // +gain, -lose
+      const delta = diff === 0 ? 0 : clamp(Math.round(Math.abs(diff) * 10), 200, 600) * Math.sign(diff);
+      const calories = clamp(maintain + delta, 800, 5000);
+
+      const proteinG = Math.round(clamp(1.8 * currentKg, 1.0*currentKg, 2.6*currentKg)); // default 1.8 g/kg
+      const fatPct = 30;
+      const fatCals = Math.round(calories * (fatPct/100));
+      const fatG = Math.round(fatCals / 9);
+      const carbCals = Math.max(0, calories - (proteinG*4) - fatCals);
+      const carbsG = Math.round(carbCals / 4);
+
+      return { calories, proteinG, fatG, carbsG };
+    }
+
+    /***** Onboarding modal *****/
+    const ob = $('onboard'), obW = $('obWeight'), obGW = $('obGoalWeight'), obMsg = $('obMsg');
+    $('obSave').addEventListener('click', ()=>{
+      const w = parseFloat(obW.value), gw = parseFloat(obGW.value);
+      if (!w || w<30 || w>300) return obMsg.textContent='Enter a valid current weight (30–300kg).';
+      if (!gw || gw<30 || gw>300) return obMsg.textContent='Enter a valid goal weight (30–300kg).';
+      state.goals = deriveGoals(w, gw);
+      saveLocal('goals', state.goals);
+      ob.style.display='none';
+      renderTargets();
+      toast('Goals set!');
+    });
+    $('obSkip').addEventListener('click', ()=>{ ob.style.display='none'; });
+
+    function maybeShowOnboarding(){
+      const saved = loadLocal('goals');
+      if (saved && saved.calories){ state.goals = saved; renderTargets(); return; }
+      ob.style.display = 'flex';
+    }
+
+    /***** Tracking helpers *****/
+    function calcAdds(per100, grams){
+      if (!per100) return null;
+      const ratio = grams/100;
+      const kcal = per100.kcal!=null ? Math.round(per100.kcal * ratio) : 0;
+      const proteinG = per100.protein!=null ? Math.round((+per100.protein) * ratio) : 0;
+      const fatG = per100.fat!=null ? Math.round((+per100.fat) * ratio) : 0;
+      const carbsG = per100.carbs!=null ? Math.round((+per100.carbs) * ratio) : 0;
+      return { kcal, proteinG, fatG, carbsG };
+    }
+
+    function addToToday(adds){
+      if (!adds) return;
+      state.today.calories += adds.kcal;
+      state.today.proteinG += adds.proteinG;
+      state.today.fatG += adds.fatG;
+      state.today.carbsG += adds.carbsG;
+      // round for display
+      state.today.calories = Math.round(state.today.calories);
+      state.today.proteinG = Math.round(state.today.proteinG);
+      state.today.fatG = Math.round(state.today.fatG);
+      state.today.carbsG = Math.round(state.today.carbsG);
+      renderTargets();
+      saveLocal('today', state.today);
+    }
+
+    /***** Events *****/
     $('manualGo').addEventListener('click', lookupManual);
     $('clearResults').addEventListener('click', () => { state.currentProduct=null; renderProduct(null); setStatus('Cleared.'); });
     $('proxyToggle').addEventListener('change', ()=> setStatus('Proxy setting updated. Future lookups will use this method.'));
-    $('addToList').addEventListener('click', ()=> { if(!state.currentProduct) return; state.queue.push(state.currentProduct); renderQueue(); setStatus('Added to document list.', 'success'); });
-    $('removeLast').addEventListener('click', ()=> { state.queue.pop(); renderQueue(); setStatus('Removed last item.'); });
+    $('addToList').addEventListener('click', onAddToList);
+    $('removeLast').addEventListener('click', ()=> { state.queue.pop(); renderQueue(); setStatus('Removed last item.'); saveLocal('queue', state.queue); });
     $('exportDocx').addEventListener('click', exportDocx);
 
     async function lookupManual(){
@@ -363,13 +405,69 @@
       }catch(err){ setStatus(err.message,'error'); state.currentProduct=null; renderProduct(null); }
     }
 
+    async function onAddToList(){
+      if (!state.currentProduct) return;
+      // Ask how much (g)
+      const grams = await promptAmount();
+      if (grams == null) return; // cancelled
+      const adds = calcAdds(state.currentProduct.per100, grams);
+      // store into queue item copy
+      const item = JSON.parse(JSON.stringify(state.currentProduct));
+      item.amountG = grams;
+      item.adds = adds;
+      state.queue.push(item);
+      addToToday(adds);
+      renderQueue();
+      setStatus('Added to document list & totals.', 'success');
+      toast(`Logged ${grams} g · +${adds.kcal} kcal`);
+      saveLocal('queue', state.queue);
+    }
+
+    function promptAmount(){
+      return new Promise((resolve)=>{
+        // lightweight inline modal prompt
+        const backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop';
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `
+          <h3>How much did you have?</h3>
+          <div class="grid grid-cols-2">
+            <div class="stack">
+              <label for="amtG">Amount (grams)</label>
+              <input id="amtG" type="number" min="1" max="2000" step="1" placeholder="e.g. 50" autofocus>
+            </div>
+            <div class="stack muted" style="justify-content:flex-end;">
+              <div>Most labels are per 100g; we’ll scale nutrition for you.</div>
+            </div>
+          </div>
+          <div class="row" style="margin-top:8px;">
+            <button id="amtOk">Add</button>
+            <button id="amtCancel" class="secondary">Cancel</button>
+          </div>`;
+        backdrop.appendChild(modal);
+        document.body.appendChild(backdrop);
+        const amtG = modal.querySelector('#amtG');
+        modal.querySelector('#amtOk').addEventListener('click', ()=>{
+          const v = parseInt(amtG.value, 10);
+          if (!v || v<=0) return; cleanup(); resolve(null); // require positive; treat invalid as cancel
+          cleanup(); resolve(v);
+        });
+        modal.querySelector('#amtCancel').addEventListener('click', ()=>{ cleanup(); resolve(null); });
+        function cleanup(){ backdrop.remove(); }
+        amtG.focus();
+      });
+    }
+
+    /***** DOCX export (includes logged amount & adds) *****/
     async function exportDocx(){
       if (!state.queue.length) return;
       if (!window.docx) return setStatus('docx library failed to load.','error');
       const { Document,Packer,Paragraph,HeadingLevel,Table,TableRow,TableCell,WidthType,TextRun,ExternalHyperlink } = window.docx;
       const sections = [
         new Paragraph({ text:'Food Barcode Log', heading:HeadingLevel.TITLE }),
-        new Paragraph({ text:`Generated: ${new Date().toLocaleString()}` })
+        new Paragraph({ text:`Generated: ${new Date().toLocaleString()}` }),
+        new Paragraph({ text:`Daily totals: ${state.today.calories} kcal • P ${state.today.proteinG}g • F ${state.today.fatG}g • C ${state.today.carbsG}g` })
       ];
       for (const p of state.queue){
         sections.push(new Paragraph({ text:'' }));
@@ -377,9 +475,10 @@
         sections.push(new Table({
           width:{ size:100, type:WidthType.PERCENTAGE },
           rows:[
-            ['Barcode', p.code], ['Quantity', p.quantity||''], ['Categories', p.categories||''],
-            ['Allergens', p.allergens||''], ['Nutri-Score', (p.nutriscore||'').toUpperCase()],
-            ['NOVA group', p.nova||''], ['Eco-Score', (p.ecoscore||'').toUpperCase()],
+            ['Barcode', p.code], ['Quantity', p.quantity||''], ['Amount eaten (g)', p.amountG ?? ''],
+            ['Adds', p.adds ? `${p.adds.kcal} kcal • P ${p.adds.proteinG}g • F ${p.adds.fatG}g • C ${p.adds.carbsG}g` : ''],
+            ['Categories', p.categories||''], ['Allergens', p.allergens||''],
+            ['Nutri-Score', (p.nutriscore||'').toUpperCase()], ['NOVA group', p.nova||''], ['Eco-Score', (p.ecoscore||'').toUpperCase()],
             ['Scanned at', new Date(p.scannedAt).toLocaleString()]
           ].map(([k,v])=> new TableRow({ children:[
             new TableCell({ children:[ new Paragraph({ text:k }) ] }),
@@ -391,11 +490,16 @@
         sections.push(new Paragraph({ text: p.ingredients_text || '—' }));
         sections.push(new Paragraph({ text:'' }));
         sections.push(new Paragraph({ text:'Nutrition per 100g', heading:HeadingLevel.HEADING_2 }));
+        const perRows = Object.entries({
+          'Energy (kcal/100g)': p.per100.kcal, 'Fat (g/100g)': p.per100.fat, 'Saturated fat (g/100g)': p.per100.sat,
+          'Carbohydrates (g/100g)': p.per100.carbs, 'Sugars (g/100g)': p.per100.sugars, 'Fiber (g/100g)': p.per100.fiber,
+          'Proteins (g/100g)': p.per100.protein, 'Salt (g/100g)': p.per100.salt, 'Sodium (mg/100g)': p.per100.sodium_mg
+        });
         sections.push(new Table({
           width:{ size:100, type:WidthType.PERCENTAGE },
-          rows:Object.entries(p.nutriments).map(([k,v])=> new TableRow({ children:[
+          rows: perRows.map(([k,v])=> new TableRow({ children:[
             new TableCell({ children:[ new Paragraph({ text:k }) ] }),
-            new TableCell({ children:[ new Paragraph({ text: v==='' ? '—' : String(v) }) ] })
+            new TableCell({ children:[ new Paragraph({ text: v==null ? '—' : String(v) }) ] })
           ]}))
         }));
         sections.push(new Paragraph({ text:'' }));
@@ -412,7 +516,7 @@
       setStatus(`Exported ${state.queue.length} item(s) to ${fname}.`, 'success');
     }
 
-    /***** Scanner libs: html5-qrcode with CDN fallbacks; ZXing lite fallback *****/
+    /***** Scanner libraries with fallbacks *****/
     const CDN_TRIES = [
       'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js',
       'https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/minified/html5-qrcode.min.js',
@@ -426,18 +530,7 @@
       try{ await loadScript('https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0'); return !!window.ZXing; }catch(e){ return false; }
     }
 
-    /***** Camera controls using Html5Qrcode directly (so we can Flip) *****/
-    const tabCamera = $('tabCamera'), tabFile = $('tabFile'), paneCamera = $('paneCamera'), paneFile = $('paneFile');
-    tabCamera.addEventListener('click', ()=> switchTab('camera'));
-    tabFile.addEventListener('click', ()=> switchTab('file'));
-    function switchTab(which){
-      const isCam = which==='camera';
-      tabCamera.classList.toggle('active', isCam); tabCamera.setAttribute('aria-selected', isCam?'true':'false');
-      tabFile.classList.toggle('active', !isCam); tabFile.setAttribute('aria-selected', !isCam?'true':'false');
-      paneCamera.style.display = isCam ? 'flex' : 'none';
-      paneFile.style.display = isCam ? 'none' : 'flex';
-    }
-
+    /***** Camera controls (flip supported) *****/
     const startBtn = $('startCam'), stopBtn = $('stopCam'), flipBtn = $('flipCam');
     startBtn.addEventListener('click', startCamera);
     stopBtn.addEventListener('click', stopCamera);
@@ -452,16 +545,13 @@
         const ok = await loadHtml5WithFallbacks();
         state.html5Loaded = ok;
       }
-      if (!state.html5Loaded || !window.Html5Qrcode){ // fall back to file / lite
+      if (!state.html5Loaded || !window.Html5Qrcode){
         modeBadge.textContent = 'Scanner: Lite mode (file only)';
         $('liteMode').style.display = 'flex';
-        setStatus('Scanner library unavailable. Use File tab or Lite mode.', 'warn');
+        setStatus('Scanner library unavailable. Use file upload or manual entry.', 'warn');
         return;
       }
-      // create instance once
-      if (!state.html5Qrcode){
-        state.html5Qrcode = new Html5Qrcode("reader");
-      }
+      if (!state.html5Qrcode) state.html5Qrcode = new Html5Qrcode("reader");
       modeBadge.textContent = 'Scanner: Camera';
       const config = {
         fps: 12,
@@ -476,37 +566,16 @@
       };
       const constraints = { facingMode: { exact: state.camFacing } };
       try{
-        await state.html5Qrcode.start(
-          constraints,
-          config,
-          onScanSuccess,
-          () => {}
-        );
-        startBtn.disabled = true; stopBtn.disabled = false; flipBtn.disabled = false;
-        setStatus(`Camera started (${state.camFacing}).`);
-      }catch(err){
-        // If facingMode exact fails (desktop, single cam), try default device
-        try{
-          await state.html5Qrcode.start({ facingMode: state.camFacing }, config, onScanSuccess, () => {});
-          startBtn.disabled = true; stopBtn.disabled = false; flipBtn.disabled = false;
-          setStatus(`Camera started (${state.camFacing}).`);
-        }catch(err2){
-          setStatus('Failed to start camera. Use File tab or check permissions.', 'error');
-        }
+        await state.html5Qrcode.start(constraints, config, onScanSuccess, ()=>{});
+      }catch(_){
+        try{ await state.html5Qrcode.start({ facingMode: state.camFacing }, config, onScanSuccess, ()=>{}); }
+        catch(e){ setStatus('Failed to start camera. Check permissions or use file upload.', 'error'); return; }
       }
+      startBtn.disabled = true; stopBtn.disabled = false; flipBtn.disabled = false;
+      setStatus(`Camera started (${state.camFacing}).`);
     }
-
-    async function stopCamera(){
-      if (!state.html5Qrcode) return;
-      try{ await state.html5Qrcode.stop(); }catch(_){}
-      try{ await state.html5Qrcode.clear(); }catch(_){}
-      startBtn.disabled = false; stopBtn.disabled = true;
-    }
-
-    async function restartCamera(){
-      await stopCamera();
-      await startCamera();
-    }
+    async function stopCamera(){ if (!state.html5Qrcode) return; try{ await state.html5Qrcode.stop(); }catch{} try{ await state.html5Qrcode.clear(); }catch{} startBtn.disabled = false; stopBtn.disabled = true; }
+    async function restartCamera(){ await stopCamera(); await startCamera(); }
 
     async function onScanSuccess(decodedText){
       const now = Date.now();
@@ -520,15 +589,19 @@
       }catch(err){ setStatus(err.message,'error'); state.currentProduct=null; renderProduct(null); }
     }
 
-    // File decode (html5-qrcode not required; we’ll use ZXing if needed)
+    // File decode (ZXing)
     $('fileDecode').addEventListener('click', async ()=>{
       const f = $('fileInput').files?.[0];
       if (!f) return setStatus('Choose an image first.','warn');
       await decodeFromImageFile(f);
     });
+    $('liteDecodeBtn')?.addEventListener('click', async ()=>{
+      const f = $('liteFile').files?.[0];
+      if (!f) return setStatus('Choose an image first.','warn');
+      await decodeFromImageFile(f);
+    });
 
     async function decodeFromImageFile(file){
-      // Prefer ZXing for file decode (works even without html5-qrcode)
       const hasZX = await ensureZXing();
       if (!hasZX){ setStatus('Could not load decoder library for file scanning.','error'); return; }
       const codeReader = new ZXing.BrowserBarcodeReader();
@@ -542,28 +615,28 @@
         if (!/^\d{8}$|^\d{12}$|^\d{13}$/.test(digits)) return setStatus(`Decoded “${decoded}” — not a supported EAN/UPC code.`, 'warn');
         const p = await fetchProduct(digits); state.currentProduct=p; renderProduct(p);
         setStatus(`Found product for ${digits}.`, 'success'); toast(`Found: ${p.name || 'Product'} (${digits})`);
-      }catch(e){
-        setStatus('Failed to decode / fetch product from the image.', 'error');
-      }finally{
-        URL.revokeObjectURL(url);
-        codeReader.reset();
-      }
+      }catch(e){ setStatus('Failed to decode / fetch product from the image.', 'error'); }
+      finally{ URL.revokeObjectURL(url); codeReader.reset(); }
     }
 
-    // Lite fallback file decode
-    $('liteDecodeBtn')?.addEventListener('click', async ()=>{
-      const f = $('liteFile').files?.[0];
-      if (!f) return setStatus('Choose an image first.','warn');
-      await decodeFromImageFile(f);
-    });
+    /***** Local storage for goals / today / queue *****/
+    function saveLocal(k, v){ try{ localStorage.setItem('fbw_'+k, JSON.stringify(v)); }catch{} }
+    function loadLocal(k){ try{ const v=localStorage.getItem('fbw_'+k); return v?JSON.parse(v):null; }catch{ return null; } }
+    function loadPersisted(){
+      const g = loadLocal('goals'); if (g) state.goals = g;
+      const t = loadLocal('today'); if (t) state.today = t;
+      const q = loadLocal('queue'); if (q) state.queue = q;
+      renderTargets(); renderQueue(); renderProduct(null);
+    }
 
-    /***** Environment hints & boot *****/
+    /***** Boot *****/
     function boot(){
-      renderProduct(null); renderQueue();
+      loadPersisted();
       if (!(location.protocol === 'https:' || location.hostname === 'localhost')) {
         setStatus('Tip: open over HTTPS or localhost for camera access. File upload still works.', 'warn');
       }
-      modeBadge.textContent = 'Scanner: Ready';
+      // onboarding first time
+      if (!state.goals || !state.goals.calories) maybeShowOnboarding();
     }
     window.addEventListener('DOMContentLoaded', boot);
   </script>
