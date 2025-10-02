@@ -4,89 +4,553 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"/>
   <title>Food Barcode → Word Doc</title>
-  <meta name="theme-color" content="#111" />
+  <meta name="theme-color" content="#0f172a" />
   <script src="https://cdn.jsdelivr.net/npm/docx@9.5.1/build/index.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    :root { --gap: 14px; --radius: 12px; }
-    html,body{margin:0;background:#0f1115;color:#f5f6f8;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;}
-    header{padding:18px var(--gap); background:#0a0c10; position:sticky; top:0; z-index:4; border-bottom:1px solid #1c212b;}
-    h1{font-size:1.15rem; margin:0;}
-    main{padding:var(--gap);}
-    .card{background:#12151c;border:1px solid #1e2530;border-radius:var(--radius);padding:var(--gap);}
-    .row{display:flex; gap:var(--gap); flex-wrap:wrap;}
-    .stack{display:flex; flex-direction:column; gap:10px;}
-    button { background:#1a73e8; color:#fff; border:none; border-radius:10px; padding:12px 14px; font-weight:600; font-size:0.95rem; cursor:pointer; }
-    button.secondary{background:#2a2f3a;}
-    button.ghost{background:transparent;border:1px solid #2a2f3a;}
-    button:disabled{opacity:.55; cursor:not-allowed;}
-    input, select{ background:#0e1218; color:#e9edf3; border:1px solid #1e2530; padding:12px; border-radius:10px; width:100%; }
-    label{font-size:.9rem; color:#a9b3c3;}
-    .muted{color:#95a1b5; font-size:.9rem;}
-    .success{color:#71dd7a;} .warn{color:#ffcc66;} .error{color:#ff7a7a;}
-    a{color:#8ab4ff; text-decoration:none;}
-    .pill{display:inline-flex; gap:6px; align-items:center; font-size:.85rem; border:1px solid #2d3648; padding:6px 10px; border-radius:999px;}
-    .badge{display:inline-flex; align-items:center; gap:8px; font-size:.8rem; padding:4px 8px; border:1px solid #2d3648; border-radius:999px;}
-    #reader{width:100%; min-height:320px; background:#0e1218; border:1px dashed #2a3240; border-radius:var(--radius); position:relative;}
-    .list-item{border-top:1px dashed #273042; padding-top:10px; margin-top:10px;}
-    footer{margin-top:28px; color:#8d98ab;}
+    :root { 
+      --gap: 16px; 
+      --radius: 16px; 
+      --radius-sm: 12px;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --primary-light: #dbeafe;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --error: #ef4444;
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-tertiary: #334155;
+      --text-primary: #f8fafc;
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      --border-light: #475569;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    * { box-sizing: border-box; }
+    
+    html, body {
+      margin: 0;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      line-height: 1.6;
+      scroll-behavior: smooth;
+    }
+
+    /* Header */
+    header {
+      padding: 24px var(--gap);
+      background: var(--bg-secondary);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(10px);
+      box-shadow: var(--shadow);
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin: 0;
+      background: linear-gradient(135deg, var(--primary), #8b5cf6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Layout */
+    main {
+      padding: var(--gap);
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow);
+      transition: all 0.2s ease;
+    }
+
+    .card:hover {
+      border-color: var(--border-light);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .row {
+      display: flex;
+      gap: var(--gap);
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .stack {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Typography */
+    h2 {
+      margin: 0 0 16px 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .muted {
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+
+    .success { color: var(--success); }
+    .warn { color: var(--warning); }
+    .error { color: var(--error); }
+
+    /* Buttons */
+    button {
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 12px 20px;
+      font-weight: 600;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 44px;
+    }
+
+    button:hover:not(:disabled) {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    button:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    button.secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    button.secondary:hover:not(:disabled) {
+      background: var(--border-light);
+    }
+
+    button.ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+
+    button.ghost:hover:not(:disabled) {
+      background: var(--bg-tertiary);
+      border-color: var(--border-light);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Form Elements */
+    input, select {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      width: 100%;
+      font-size: 0.875rem;
+      transition: all 0.2s ease;
+      min-height: 44px;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    label {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    /* Pills and Badges */
+    .pill {
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+      font-size: 0.75rem;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: var(--bg-primary);
+      color: var(--text-secondary);
+      transition: all 0.2s ease;
+    }
+
+    .pill:hover {
+      border-color: var(--border-light);
+      background: var(--bg-tertiary);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 6px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-primary);
+      color: var(--text-secondary);
+    }
+
+    /* Scanner */
+    #reader {
+      width: 100%;
+      min-height: 320px;
+      background: var(--bg-primary);
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      position: relative;
+      transition: all 0.2s ease;
+    }
+
+    #reader:hover {
+      border-color: var(--border-light);
+    }
+
+    /* Progress Bars */
+    .progress-container {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .progress-label {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .progress-value {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .bar {
+      height: 8px;
+      background: var(--bg-primary);
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .bar > span {
+      display: block;
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), #8b5cf6);
+      width: 0%;
+      transition: width 0.5s ease;
+      border-radius: 999px;
+    }
+
+    /* List Items */
+    .list-item {
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+      margin-top: 16px;
+      transition: all 0.2s ease;
+    }
+
+    .list-item:hover {
+      background: var(--bg-primary);
+      margin: 16px -12px 0 -12px;
+      padding: 16px 12px;
+      border-radius: var(--radius-sm);
+      border-top: 1px solid transparent;
+    }
+
     /* Toast */
-    #toast{position:fixed; left:50%; transform:translateX(-50%); bottom:24px; background:#1b2332; border:1px solid #2a3242; color:#e9edf3; padding:12px 14px; border-radius:10px; box-shadow:0 6px 30px rgba(0,0,0,.35); z-index:5; opacity:0; pointer-events:none; transition:opacity .25s, bottom .25s;}
-    #toast.show{opacity:1; bottom:34px;}
+    #toast {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 24px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      padding: 16px 20px;
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-xl);
+      z-index: 50;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s ease;
+      font-weight: 500;
+      max-width: 400px;
+    }
+
+    #toast.show {
+      opacity: 1;
+      bottom: 32px;
+      pointer-events: auto;
+    }
+
     /* Modal */
-    .modal-backdrop{position:fixed; inset:0; background:rgba(0,0,0,.55); display:flex; align-items:center; justify-content:center; z-index:6;}
-    .modal{background:#12151c; border:1px solid #1e2530; border-radius:14px; width:min(600px,92vw); padding:18px;}
-    .modal h3{margin:0 0 8px 0; font-size:1.1rem;}
-    .grid{display:grid; gap:10px;}
-    @media(min-width:700px){ .grid-cols-2{ grid-template-columns: repeat(2, 1fr); } }
-    /* Progress bars */
-    .bar{height:8px; background:#1c2433; border-radius:999px; overflow:hidden;}
-    .bar>span{display:block; height:100%; background:#1a73e8; width:0%;}
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      backdrop-filter: blur(4px);
+      animation: fadeIn 0.2s ease;
+    }
+
+    .modal {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      width: min(600px, 92vw);
+      padding: 32px;
+      box-shadow: var(--shadow-xl);
+      animation: slideUp 0.3s ease;
+    }
+
+    .modal h3 {
+      margin: 0 0 16px 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    /* Grid */
+    .grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    @media(min-width: 768px) {
+      .grid-cols-2 {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    /* Responsive */
+    @media(max-width: 768px) {
+      header {
+        padding: 16px var(--gap);
+      }
+      
+      h1 {
+        font-size: 1.25rem;
+      }
+      
+      .card {
+        padding: 20px;
+      }
+      
+      .row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .row.keep-row {
+        flex-direction: row;
+        align-items: center;
+      }
+    }
+
+    /* Product Image */
+    .product-image {
+      width: 100%;
+      max-height: 240px;
+      object-fit: contain;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg-primary);
+      transition: all 0.2s ease;
+    }
+
+    .product-image:hover {
+      border-color: var(--border-light);
+      transform: scale(1.02);
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .tabs button {
+      min-height: 40px;
+      padding: 8px 16px;
+      font-size: 0.875rem;
+    }
+
+    /* Footer */
+    footer {
+      margin-top: 40px;
+      padding: 24px 0;
+      color: var(--text-muted);
+      text-align: center;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Loading States */
+    .loading {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .loading::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+      animation: shimmer 1.5s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { left: -100%; }
+      100% { left: 100%; }
+    }
+
+    /* Status indicators */
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .status-indicator::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .status-indicator.success::before {
+      background: var(--success);
+    }
+
+    .status-indicator.warning::before {
+      background: var(--warning);
+    }
+
+    .status-indicator.error::before {
+      background: var(--error);
+    }
   </style>
 </head>
 <body>
-  <header><h1>Food Barcode → Word Doc</h1></header>
+  <header>
+    <h1>🍎 Food Barcode → Word Doc</h1>
+  </header>
 
   <main class="stack" aria-live="polite">
     <!-- Targets & today progress -->
     <section class="card stack" aria-label="Daily Targets">
-      <h2 style="margin:0;font-size:1.05rem;">Today’s Targets & Progress</h2>
-      <div id="targets" class="row" style="gap:10px;flex-wrap:wrap;"></div>
+      <h2>📊 Today's Targets & Progress</h2>
+      <div id="targets" class="row" style="gap:12px;flex-wrap:wrap;"></div>
       <div class="stack">
         <div class="row">
-          <div style="flex:1;min-width:220px;">
-            <div class="row" style="justify-content:space-between;"><span class="muted">Calories</span><span id="calTxt" class="muted">0 / 0</span></div>
+          <div class="progress-container">
+            <div class="progress-header">
+              <span class="progress-label">Calories</span>
+              <span id="calTxt" class="progress-value">0 / 0</span>
+            </div>
             <div class="bar"><span id="calBar"></span></div>
           </div>
-          <div style="flex:1;min-width:220px;">
-            <div class="row" style="justify-content:space-between;"><span class="muted">Protein (g)</span><span id="proTxt" class="muted">0 / 0</span></div>
+          <div class="progress-container">
+            <div class="progress-header">
+              <span class="progress-label">Protein (g)</span>
+              <span id="proTxt" class="progress-value">0 / 0</span>
+            </div>
             <div class="bar"><span id="proBar"></span></div>
           </div>
         </div>
         <div class="row">
-          <div style="flex:1;min-width:220px;">
-            <div class="row" style="justify-content:space-between;"><span class="muted">Fat (g)</span><span id="fatTxt" class="muted">0 / 0</span></div>
+          <div class="progress-container">
+            <div class="progress-header">
+              <span class="progress-label">Fat (g)</span>
+              <span id="fatTxt" class="progress-value">0 / 0</span>
+            </div>
             <div class="bar"><span id="fatBar"></span></div>
           </div>
-          <div style="flex:1;min-width:220px;">
-            <div class="row" style="justify-content:space-between;"><span class="muted">Carbs (g)</span><span id="carbTxt" class="muted">0 / 0</span></div>
+          <div class="progress-container">
+            <div class="progress-header">
+              <span class="progress-label">Carbs (g)</span>
+              <span id="carbTxt" class="progress-value">0 / 0</span>
+            </div>
             <div class="bar"><span id="carbBar"></span></div>
           </div>
         </div>
       </div>
-      <div id="goalHint" class="muted">We’ll ask your weight and goal the first time to set these.</div>
+      <div id="goalHint" class="muted">💡 We'll ask your weight and goal the first time to set these targets.</div>
     </section>
 
     <!-- Scanner -->
     <section class="card stack" aria-label="Scanner">
-      <div class="row" style="align-items:center; justify-content:space-between;">
-        <div class="muted">Use Camera if available; otherwise File upload or manual entry.</div>
-        <div id="modeBadge" class="badge muted">Scanner: Ready</div>
+      <div class="row keep-row" style="justify-content:space-between;">
+        <div class="muted">📱 Use camera, file upload, or manual entry</div>
+        <div id="modeBadge" class="badge">Scanner: Ready</div>
       </div>
 
-      <div class="tabs row" role="tablist" aria-label="Scan mode" style="gap:8px;">
-        <button id="startCam" class="ghost">Start camera</button>
-        <button id="flipCam" class="ghost" disabled>Flip camera</button>
-        <button id="stopCam" class="ghost" disabled>Stop</button>
+      <div class="tabs" role="tablist" aria-label="Scan mode">
+        <button id="startCam" class="ghost">📷 Start Camera</button>
+        <button id="flipCam" class="ghost" disabled>🔄 Flip</button>
+        <button id="stopCam" class="ghost" disabled>⏹️ Stop</button>
       </div>
 
       <div id="reader" role="region" aria-label="Camera or file barcode scanner"></div>
@@ -94,63 +558,65 @@
       <div class="stack">
         <input id="fileInput" type="file" accept="image/*" />
         <div class="row">
-          <button id="fileDecode" class="secondary">Decode from image</button>
+          <button id="fileDecode" class="secondary">📁 Decode from Image</button>
         </div>
       </div>
 
-      <!-- Lite mode (if html5-qrcode fails entirely) -->
+      <!-- Lite mode -->
       <div id="liteMode" class="stack" style="display:none;">
-        <div class="muted">Scanner library failed to load. Switched to <strong>Lite mode</strong> (file uploads only).</div>
+        <div class="muted">⚠️ Scanner library failed. Using <strong>Lite mode</strong> (file uploads only).</div>
         <input id="liteFile" type="file" accept="image/*" />
-        <div class="row"><button id="liteDecodeBtn" class="secondary">Decode from image</button></div>
+        <div class="row"><button id="liteDecodeBtn" class="secondary">📁 Decode from Image</button></div>
       </div>
 
       <div class="row">
         <div class="stack" style="flex:1; min-width: 220px;">
-          <label for="manual">Or type a barcode (EAN-13 / UPC-A / UPC-E / EAN-8)</label>
+          <label for="manual">✏️ Or type a barcode manually</label>
           <div class="row">
             <input id="manual" inputmode="numeric" pattern="[0-9]*" placeholder="e.g. 737628064502" />
-            <button id="manualGo" class="secondary">Lookup</button>
+            <button id="manualGo" class="secondary">🔍 Lookup</button>
           </div>
         </div>
 
         <div class="stack" style="flex:1; min-width: 220px;">
-          <label for="proxyToggle">CORS helper (only if you see a CORS error)</label>
+          <label for="proxyToggle">🌐 CORS helper (if needed)</label>
           <div class="row">
             <select id="proxyToggle">
               <option value="none">Direct (default)</option>
-              <option value="allorigins">Use allorigins.win proxy</option>
+              <option value="allorigins">Use proxy</option>
             </select>
-            <button id="clearResults" class="secondary">Clear</button>
+            <button id="clearResults" class="secondary">🗑️ Clear</button>
           </div>
         </div>
       </div>
-      <div id="status" class="muted">Ready.</div>
+      <div id="status" class="status-indicator muted">Ready to scan</div>
     </section>
 
     <!-- Latest -->
     <section class="card stack" aria-label="Latest scan result">
-      <h2 style="margin:0;font-size:1.05rem;">Latest product</h2>
+      <h2>🔍 Latest Product</h2>
       <div id="product-details" class="stack">
-        <div class="muted">Scan a barcode to see details here.</div>
+        <div class="muted">Scan a barcode to see product details here.</div>
       </div>
       <div class="row">
-        <button id="addToList" disabled>Add to document list</button>
+        <button id="addToList" disabled>➕ Add to Document List</button>
       </div>
     </section>
 
     <!-- Queue -->
     <section class="card stack" aria-label="Document queue">
-      <h2 style="margin:0;font-size:1.05rem;">Items to export</h2>
+      <h2>📋 Items to Export</h2>
       <div id="queue" class="stack muted">Nothing added yet.</div>
       <div class="row">
-        <button id="exportDocx" disabled>Export Word (.docx)</button>
-        <button id="removeLast" class="secondary" disabled>Remove last</button>
+        <button id="exportDocx" disabled>📄 Export Word (.docx)</button>
+        <button id="removeLast" class="secondary" disabled>❌ Remove Last</button>
       </div>
     </section>
 
-    <footer class="muted">
-      Data is fetched from Open Food Facts (open, community-maintained). Scanning runs entirely on your device.
+    <footer>
+      <div class="muted">
+        📊 Data from <strong>Open Food Facts</strong> (community-maintained) • 🔒 Scanning runs on your device
+      </div>
     </footer>
   </main>
 
@@ -160,26 +626,28 @@
   <!-- Onboarding Modal -->
   <div id="onboard" class="modal-backdrop" style="display:none;">
     <div class="modal">
-      <h3>Set your starting point</h3>
+      <h3>🎯 Set Your Goals</h3>
+      <div class="muted" style="margin-bottom: 20px;">Help us calculate your daily nutrition targets</div>
       <div class="grid grid-cols-2">
         <div class="stack">
-          <label for="obWeight">Your current weight (kg)</label>
+          <label for="obWeight">Current Weight (kg)</label>
           <input id="obWeight" type="number" min="30" max="300" step="0.1" placeholder="e.g. 75">
         </div>
         <div class="stack">
-          <label for="obGoalWeight">Your goal weight (kg)</label>
+          <label for="obGoalWeight">Goal Weight (kg)</label>
           <input id="obGoalWeight" type="number" min="30" max="300" step="0.1" placeholder="e.g. 70">
         </div>
       </div>
-      <div class="row" style="margin-top:8px;">
-        <button id="obSave">Save & set goals</button>
-        <button id="obSkip" class="secondary">Skip (you can enter later)</button>
+      <div class="row" style="margin-top:20px;">
+        <button id="obSave">✅ Save & Set Goals</button>
+        <button id="obSkip" class="secondary">⏭️ Skip for Now</button>
       </div>
-      <div id="obMsg" class="muted">We’ll estimate calories and macros automatically.</div>
+      <div id="obMsg" class="muted">We'll estimate calories and macros automatically based on your goals.</div>
     </div>
   </div>
 
   <script>
+    // [Previous JavaScript code remains the same, with minor UI text updates]
     /***** State *****/
     const state = {
       lastDecoded:null, lastTime:0,
@@ -198,8 +666,18 @@
     const calTxt = $('calTxt'), proTxt = $('proTxt'), fatTxt = $('fatTxt'), carbTxt = $('carbTxt'), targetsWrap = $('targets'), goalHint = $('goalHint');
 
     /***** UI helpers *****/
-    function setStatus(msg, cls="muted"){ statusEl.className = cls; statusEl.textContent = msg; }
-    function toast(msg){ toastEl.textContent = msg; toastEl.classList.add('show'); if (navigator.vibrate) try{navigator.vibrate(40);}catch{}; setTimeout(()=>toastEl.classList.remove('show'), 2200); }
+    function setStatus(msg, cls="muted"){ 
+      statusEl.className = `status-indicator ${cls}`; 
+      statusEl.textContent = msg; 
+    }
+    
+    function toast(msg){ 
+      toastEl.textContent = msg; 
+      toastEl.classList.add('show'); 
+      if (navigator.vibrate) try{navigator.vibrate([40]);}catch{}; 
+      setTimeout(()=>toastEl.classList.remove('show'), 3000); 
+    }
+    
     function fmt(v){ return (v ?? "").toString().trim(); }
     function asList(v){ if(!v) return ""; if(Array.isArray(v)) return v.filter(Boolean).join(", "); return String(v); }
     function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
@@ -213,7 +691,7 @@
     }
 
     async function fetchProduct(barcode){
-      setStatus(`Looking up ${barcode}...`);
+      setStatus(`🔍 Looking up ${barcode}...`);
       const res = await fetch(offUrlFor(barcode), { mode:'cors' }).catch(err => ({ ok:false, error:err }));
       if (!res || !res.ok) throw new Error('Network or CORS error while contacting Open Food Facts.');
       const json = await res.json();
@@ -253,7 +731,7 @@
     function renderProduct(p){
       detailsEl.innerHTML = '';
       if(!p){
-        detailsEl.innerHTML = '<div class="muted">Scan a barcode to see details here.</div>';
+        detailsEl.innerHTML = '<div class="muted">Scan a barcode to see product details here.</div>';
         addBtn.disabled = true; return;
       }
       const wrap = document.createElement('div');
@@ -269,49 +747,57 @@
         ['Salt (g/100g)', p.per100.salt],
         ['Sodium (mg/100g)', p.per100.sodium_mg]
       ].map(([k,v])=> `<div class="pill">${k}: ${v==null?'—':v}</div>`).join('');
+      
       wrap.innerHTML = `
-        <div class="row" style="align-items:center; justify-content:space-between;">
+        <div class="row keep-row" style="justify-content:space-between;">
           <div>
-            <div style="font-size:1.1rem;font-weight:700;">${p.name || 'Unknown'}${p.brands ? ' — ' + p.brands : ''}</div>
-            <div class="muted">Barcode: ${p.code} • ${p.quantity || '—'}</div>
+            <div style="font-size:1.25rem;font-weight:700;margin-bottom:4px;">${p.name || 'Unknown'}${p.brands ? ' — ' + p.brands : ''}</div>
+            <div class="muted">📊 Barcode: ${p.code} • 📦 ${p.quantity || '—'}</div>
           </div>
-          ${p.nutriscore ? `<span class="pill">Nutri-Score: ${p.nutriscore.toUpperCase()}</span>` : ''}
-          ${p.nova ? `<span class="pill">NOVA: ${p.nova}</span>` : ''}
-          ${p.ecoscore ? `<span class="pill">Eco-Score: ${p.ecoscore.toUpperCase()}</span>` : ''}
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            ${p.nutriscore ? `<span class="pill" style="background:var(--success);color:white;">Nutri-Score: ${p.nutriscore.toUpperCase()}</span>` : ''}
+            ${p.nova ? `<span class="pill">NOVA: ${p.nova}</span>` : ''}
+            ${p.ecoscore ? `<span class="pill" style="background:var(--success);color:white;">Eco-Score: ${p.ecoscore.toUpperCase()}</span>` : ''}
+          </div>
         </div>
-        ${p.image ? `<img alt="Product image" src="${p.image}" style="width:100%;max-height:220px;object-fit:contain;border-radius:10px;border:1px solid #1e2530;background:#0e1218;" />` : ''}
-        <div><strong>Ingredients:</strong> ${p.ingredients_text || '<span class="muted">—</span>'}</div>
-        <div><strong>Allergens:</strong> ${p.allergens || '<span class="muted">—</span>'}</div>
+        ${p.image ? `<img alt="Product image" src="${p.image}" class="product-image" />` : ''}
+        <div><strong>🥗 Ingredients:</strong> ${p.ingredients_text || '<span class="muted">—</span>'}</div>
+        <div><strong>⚠️ Allergens:</strong> ${p.allergens || '<span class="muted">—</span>'}</div>
         <div class="stack">
-          <strong>Nutrition (per 100g):</strong>
-          <div class="row">${nutrPills}</div>
+          <strong>📊 Nutrition (per 100g):</strong>
+          <div class="row" style="flex-wrap:wrap;">${nutrPills}</div>
         </div>
-        <div class="muted">Source: <a href="${p.url}" target="_blank" rel="noopener">Open Food Facts</a></div>`;
+        <div class="muted">📖 Source: <a href="${p.url}" target="_blank" rel="noopener" style="color:var(--primary);">Open Food Facts</a></div>`;
       detailsEl.appendChild(wrap);
       addBtn.disabled = false;
     }
 
     function renderQueue(){
       if (!state.queue.length){
-        queueEl.textContent = 'Nothing added yet.'; exportBtn.disabled = true; removeBtn.disabled = true; return;
+        queueEl.innerHTML = '<div class="muted">📝 Nothing added yet. Scan some products to get started!</div>'; 
+        exportBtn.disabled = true; removeBtn.disabled = true; return;
       }
       exportBtn.disabled = false; removeBtn.disabled = false;
       queueEl.innerHTML = state.queue.map((p,i)=>`
         <div class="list-item">
-          <div><strong>${i+1}. ${p.name || 'Unknown'}</strong> ${p.brands ? '— ' + p.brands : ''}</div>
-          <div class="muted">Barcode: ${p.code} • ${p.quantity || '—'} • Amount: ${p.amountG ?? '—'} g • Logged: ${new Date(p.scannedAt).toLocaleString()}</div>
-          <div class="muted">Adds: ${fmtAdds(p.adds)}</div>
+          <div style="font-weight:600;margin-bottom:4px;">${i+1}. ${p.name || 'Unknown'} ${p.brands ? '— ' + p.brands : ''}</div>
+          <div class="muted">📊 ${p.code} • 📦 ${p.quantity || '—'} • ⚖️ ${p.amountG ?? '—'} g • 🕒 ${new Date(p.scannedAt).toLocaleString()}</div>
+          <div class="muted">➕ Adds: ${fmtAdds(p.adds)}</div>
         </div>`).join('');
     }
-    function fmtAdds(a){ if(!a) return '—'; return `${a.kcal} kcal, P ${a.proteinG}g, F ${a.fatG}g, C ${a.carbsG}g`; }
+    
+    function fmtAdds(a){ 
+      if(!a) return '—'; 
+      return `${a.kcal} kcal, P ${a.proteinG}g, F ${a.fatG}g, C ${a.carbsG}g`; 
+    }
 
     function renderTargets(){
       const g = state.goals, t = state.today;
       targetsWrap.innerHTML = `
-        <span class="pill">Calories target: <strong>${g.calories||0}</strong></span>
-        <span class="pill">Protein: <strong>${g.proteinG||0} g</strong></span>
-        <span class="pill">Fat: <strong>${g.fatG||0} g</strong></span>
-        <span class="pill">Carbs: <strong>${g.carbsG||0} g</strong></span>
+        <span class="pill">🎯 Calories: <strong>${g.calories||0}</strong></span>
+        <span class="pill">🥩 Protein: <strong>${g.proteinG||0} g</strong></span>
+        <span class="pill">🧈 Fat: <strong>${g.fatG||0} g</strong></span>
+        <span class="pill">🍞 Carbs: <strong>${g.carbsG||0} g</strong></span>
       `;
       calBar.style.width = pct(t.calories, g.calories) + '%';
       proBar.style.width = pct(t.proteinG, g.proteinG) + '%';
@@ -326,12 +812,12 @@
 
     /***** Goal math from weight + goal weight *****/
     function deriveGoals(currentKg, goalKg){
-      const maintain = Math.round(currentKg * 30); // simple maintenance estimate
-      const diff = goalKg - currentKg; // +gain, -lose
+      const maintain = Math.round(currentKg * 30);
+      const diff = goalKg - currentKg;
       const delta = diff === 0 ? 0 : clamp(Math.round(Math.abs(diff) * 10), 200, 600) * Math.sign(diff);
       const calories = clamp(maintain + delta, 800, 5000);
 
-      const proteinG = Math.round(clamp(1.8 * currentKg, 1.0*currentKg, 2.6*currentKg)); // default 1.8 g/kg
+      const proteinG = Math.round(clamp(1.8 * currentKg, 1.0*currentKg, 2.6*currentKg));
       const fatPct = 30;
       const fatCals = Math.round(calories * (fatPct/100));
       const fatG = Math.round(fatCals / 9);
@@ -345,13 +831,13 @@
     const ob = $('onboard'), obW = $('obWeight'), obGW = $('obGoalWeight'), obMsg = $('obMsg');
     $('obSave').addEventListener('click', ()=>{
       const w = parseFloat(obW.value), gw = parseFloat(obGW.value);
-      if (!w || w<30 || w>300) return obMsg.textContent='Enter a valid current weight (30–300kg).';
-      if (!gw || gw<30 || gw>300) return obMsg.textContent='Enter a valid goal weight (30–300kg).';
+      if (!w || w<30 || w>300) return obMsg.textContent='⚠️ Enter a valid current weight (30–300kg).';
+      if (!gw || gw<30 || gw>300) return obMsg.textContent='⚠️ Enter a valid goal weight (30–300kg).';
       state.goals = deriveGoals(w, gw);
       saveLocal('goals', state.goals);
       ob.style.display='none';
       renderTargets();
-      toast('Goals set!');
+      toast('🎯 Goals set successfully!');
     });
     $('obSkip').addEventListener('click', ()=>{ ob.style.display='none'; });
 
@@ -378,7 +864,6 @@
       state.today.proteinG += adds.proteinG;
       state.today.fatG += adds.fatG;
       state.today.carbsG += adds.carbsG;
-      // round for display
       state.today.calories = Math.round(state.today.calories);
       state.today.proteinG = Math.round(state.today.proteinG);
       state.today.fatG = Math.round(state.today.fatG);
@@ -389,68 +874,81 @@
 
     /***** Events *****/
     $('manualGo').addEventListener('click', lookupManual);
-    $('clearResults').addEventListener('click', () => { state.currentProduct=null; renderProduct(null); setStatus('Cleared.'); });
-    $('proxyToggle').addEventListener('change', ()=> setStatus('Proxy setting updated. Future lookups will use this method.'));
+    $('clearResults').addEventListener('click', () => { 
+      state.currentProduct=null; 
+      renderProduct(null); 
+      setStatus('✨ Cleared results.'); 
+    });
+    $('proxyToggle').addEventListener('change', ()=> setStatus('🌐 Proxy setting updated.'));
     $('addToList').addEventListener('click', onAddToList);
-    $('removeLast').addEventListener('click', ()=> { state.queue.pop(); renderQueue(); setStatus('Removed last item.'); saveLocal('queue', state.queue); });
+    $('removeLast').addEventListener('click', ()=> { 
+      state.queue.pop(); 
+      renderQueue(); 
+      setStatus('❌ Removed last item.'); 
+      saveLocal('queue', state.queue); 
+    });
     $('exportDocx').addEventListener('click', exportDocx);
 
     async function lookupManual(){
       const digits = ($('manual').value || '').replace(/\D/g,'');
-      if (!digits) return setStatus('Enter a barcode to look up.','warn');
-      if (!/^\d{8}$|^\d{12}$|^\d{13}$/.test(digits)) return setStatus('Enter a valid EAN-8 / UPC-A / UPC-E / EAN-13 code.','warn');
+      if (!digits) return setStatus('⚠️ Enter a barcode to look up.','warning');
+      if (!/^\d{8}$|^\d{12}$|^\d{13}$/.test(digits)) return setStatus('⚠️ Enter a valid EAN/UPC code.','warning');
       try{
-        const p = await fetchProduct(digits); state.currentProduct=p; renderProduct(p);
-        setStatus(`Found product for ${digits}.`,'success'); toast(`Found: ${p.name || 'Product'} (${digits})`);
-      }catch(err){ setStatus(err.message,'error'); state.currentProduct=null; renderProduct(null); }
+        const p = await fetchProduct(digits); 
+        state.currentProduct=p; 
+        renderProduct(p);
+        setStatus(`✅ Found product for ${digits}.`,'success'); 
+        toast(`🎉 Found: ${p.name || 'Product'} (${digits})`);
+      }catch(err){ 
+        setStatus(`❌ ${err.message}`,'error'); 
+        state.currentProduct=null; 
+        renderProduct(null); 
+      }
     }
 
     async function onAddToList(){
       if (!state.currentProduct) return;
-      // Ask how much (g)
       const grams = await promptAmount();
-      if (grams == null) return; // cancelled
+      if (grams == null) return;
       const adds = calcAdds(state.currentProduct.per100, grams);
-      // store into queue item copy
       const item = JSON.parse(JSON.stringify(state.currentProduct));
       item.amountG = grams;
       item.adds = adds;
       state.queue.push(item);
       addToToday(adds);
       renderQueue();
-      setStatus('Added to document list & totals.', 'success');
-      toast(`Logged ${grams} g · +${adds.kcal} kcal`);
+      setStatus('✅ Added to document list & totals.', 'success');
+      toast(`📝 Logged ${grams}g · +${adds.kcal} kcal`);
       saveLocal('queue', state.queue);
     }
 
     function promptAmount(){
       return new Promise((resolve)=>{
-        // lightweight inline modal prompt
         const backdrop = document.createElement('div');
         backdrop.className = 'modal-backdrop';
         const modal = document.createElement('div');
         modal.className = 'modal';
         modal.innerHTML = `
-          <h3>How much did you have?</h3>
+          <h3>⚖️ How much did you have?</h3>
           <div class="grid grid-cols-2">
             <div class="stack">
               <label for="amtG">Amount (grams)</label>
               <input id="amtG" type="number" min="1" max="2000" step="1" placeholder="e.g. 50" autofocus>
             </div>
             <div class="stack muted" style="justify-content:flex-end;">
-              <div>Most labels are per 100g; we’ll scale nutrition for you.</div>
+              <div>💡 Most labels show nutrition per 100g. We'll scale it for your portion.</div>
             </div>
           </div>
-          <div class="row" style="margin-top:8px;">
-            <button id="amtOk">Add</button>
-            <button id="amtCancel" class="secondary">Cancel</button>
+          <div class="row" style="margin-top:20px;">
+            <button id="amtOk">✅ Add to List</button>
+            <button id="amtCancel" class="secondary">❌ Cancel</button>
           </div>`;
         backdrop.appendChild(modal);
         document.body.appendChild(backdrop);
         const amtG = modal.querySelector('#amtG');
         modal.querySelector('#amtOk').addEventListener('click', ()=>{
           const v = parseInt(amtG.value, 10);
-          if (!v || v<=0) return; cleanup(); resolve(null); // require positive; treat invalid as cancel
+          if (!v || v<=0) return;
           cleanup(); resolve(v);
         });
         modal.querySelector('#amtCancel').addEventListener('click', ()=>{ cleanup(); resolve(null); });
@@ -459,16 +957,20 @@
       });
     }
 
-    /***** DOCX export (includes logged amount & adds) *****/
+    /***** DOCX export *****/
     async function exportDocx(){
       if (!state.queue.length) return;
-      if (!window.docx) return setStatus('docx library failed to load.','error');
+      if (!window.docx) return setStatus('❌ Export library failed to load.','error');
+      
+      setStatus('📄 Generating document...', 'success');
+      
       const { Document,Packer,Paragraph,HeadingLevel,Table,TableRow,TableCell,WidthType,TextRun,ExternalHyperlink } = window.docx;
       const sections = [
-        new Paragraph({ text:'Food Barcode Log', heading:HeadingLevel.TITLE }),
-        new Paragraph({ text:`Generated: ${new Date().toLocaleString()}` }),
-        new Paragraph({ text:`Daily totals: ${state.today.calories} kcal • P ${state.today.proteinG}g • F ${state.today.fatG}g • C ${state.today.carbsG}g` })
+        new Paragraph({ text:'🍎 Food Barcode Log', heading:HeadingLevel.TITLE }),
+        new Paragraph({ text:`📅 Generated: ${new Date().toLocaleString()}` }),
+        new Paragraph({ text:`📊 Daily totals: ${state.today.calories} kcal • P ${state.today.proteinG}g • F ${state.today.fatG}g • C ${state.today.carbsG}g` })
       ];
+      
       for (const p of state.queue){
         sections.push(new Paragraph({ text:'' }));
         sections.push(new Paragraph({ text:`${p.name}${p.brands?' — '+p.brands:''}`, heading:HeadingLevel.HEADING_1 }));
@@ -476,7 +978,7 @@
           width:{ size:100, type:WidthType.PERCENTAGE },
           rows:[
             ['Barcode', p.code], ['Quantity', p.quantity||''], ['Amount eaten (g)', p.amountG ?? ''],
-            ['Adds', p.adds ? `${p.adds.kcal} kcal • P ${p.adds.proteinG}g • F ${p.adds.fatG}g • C ${p.adds.carbsG}g` : ''],
+            ['Nutritional contribution', p.adds ? `${p.adds.kcal} kcal • P ${p.adds.proteinG}g • F ${p.adds.fatG}g • C ${p.adds.carbsG}g` : ''],
             ['Categories', p.categories||''], ['Allergens', p.allergens||''],
             ['Nutri-Score', (p.nutriscore||'').toUpperCase()], ['NOVA group', p.nova||''], ['Eco-Score', (p.ecoscore||'').toUpperCase()],
             ['Scanned at', new Date(p.scannedAt).toLocaleString()]
@@ -508,12 +1010,19 @@
           new ExternalHyperlink({ children:[ new TextRun({ text:p.url, underline:{} }) ], link:p.url })
         ]}));
       }
+      
       const doc = new Document({ sections:[{ children:sections }] });
       const blob = await Packer.toBlob(doc);
-      const fname = `Food-Scans-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.docx`;
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fname;
-      document.body.appendChild(a); a.click(); URL.revokeObjectURL(a.href); a.remove();
-      setStatus(`Exported ${state.queue.length} item(s) to ${fname}.`, 'success');
+      const fname = `Food-Log-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.docx`;
+      const a = document.createElement('a'); 
+      a.href = URL.createObjectURL(blob); 
+      a.download = fname;
+      document.body.appendChild(a); 
+      a.click(); 
+      URL.revokeObjectURL(a.href); 
+      a.remove();
+      setStatus(`✅ Exported ${state.queue.length} item(s) to ${fname}.`, 'success');
+      toast(`📄 Document exported successfully!`);
     }
 
     /***** Scanner libraries with fallbacks *****/
@@ -522,15 +1031,36 @@
       'https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/minified/html5-qrcode.min.js',
       'https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js'
     ];
-    function loadScript(src){ return new Promise((resolve,reject)=>{ const s=document.createElement('script'); s.src=src; s.async=true; s.onload=resolve; s.onerror=reject; document.head.appendChild(s); }); }
-    async function loadHtml5WithFallbacks(){ for (const url of CDN_TRIES){ try{ await loadScript(url); if (window.Html5Qrcode) return true; }catch(e){} } return false; }
+    
+    function loadScript(src){ 
+      return new Promise((resolve,reject)=>{ 
+        const s=document.createElement('script'); 
+        s.src=src; s.async=true; s.onload=resolve; s.onerror=reject; 
+        document.head.appendChild(s); 
+      }); 
+    }
+    
+    async function loadHtml5WithFallbacks(){ 
+      for (const url of CDN_TRIES){ 
+        try{ 
+          await loadScript(url); 
+          if (window.Html5Qrcode) return true; 
+        }catch(e){} 
+      } 
+      return false; 
+    }
 
     async function ensureZXing(){
       if (window.ZXing) return true;
-      try{ await loadScript('https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0'); return !!window.ZXing; }catch(e){ return false; }
+      try{ 
+        await loadScript('https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0'); 
+        return !!window.ZXing; 
+      }catch(e){ 
+        return false; 
+      }
     }
 
-    /***** Camera controls (flip supported) *****/
+    /***** Camera controls *****/
     const startBtn = $('startCam'), stopBtn = $('stopCam'), flipBtn = $('flipCam');
     startBtn.addEventListener('click', startCamera);
     stopBtn.addEventListener('click', stopCamera);
@@ -542,17 +1072,18 @@
 
     async function startCamera(){
       if (!state.html5Loaded){
+        setStatus('📱 Loading camera scanner...', 'success');
         const ok = await loadHtml5WithFallbacks();
         state.html5Loaded = ok;
       }
       if (!state.html5Loaded || !window.Html5Qrcode){
-        modeBadge.textContent = 'Scanner: Lite mode (file only)';
+        modeBadge.textContent = 'Scanner: Lite mode';
         $('liteMode').style.display = 'flex';
-        setStatus('Scanner library unavailable. Use file upload or manual entry.', 'warn');
+        setStatus('⚠️ Camera unavailable. Use file upload.', 'warning');
         return;
       }
       if (!state.html5Qrcode) state.html5Qrcode = new Html5Qrcode("reader");
-      modeBadge.textContent = 'Scanner: Camera';
+      modeBadge.textContent = 'Scanner: Camera Active';
       const config = {
         fps: 12,
         qrbox: { width: 320, height: 140 },
@@ -568,60 +1099,95 @@
       try{
         await state.html5Qrcode.start(constraints, config, onScanSuccess, ()=>{});
       }catch(_){
-        try{ await state.html5Qrcode.start({ facingMode: state.camFacing }, config, onScanSuccess, ()=>{}); }
-        catch(e){ setStatus('Failed to start camera. Check permissions or use file upload.', 'error'); return; }
+        try{ 
+          await state.html5Qrcode.start({ facingMode: state.camFacing }, config, onScanSuccess, ()=>{}); 
+        }catch(e){ 
+          setStatus('❌ Camera failed. Check permissions.', 'error'); 
+          return; 
+        }
       }
       startBtn.disabled = true; stopBtn.disabled = false; flipBtn.disabled = false;
-      setStatus(`Camera started (${state.camFacing}).`);
+      setStatus(`📷 Camera started (${state.camFacing}).`, 'success');
     }
-    async function stopCamera(){ if (!state.html5Qrcode) return; try{ await state.html5Qrcode.stop(); }catch{} try{ await state.html5Qrcode.clear(); }catch{} startBtn.disabled = false; stopBtn.disabled = true; }
-    async function restartCamera(){ await stopCamera(); await startCamera(); }
+    
+    async function stopCamera(){ 
+      if (!state.html5Qrcode) return; 
+      try{ await state.html5Qrcode.stop(); }catch{} 
+      try{ await state.html5Qrcode.clear(); }catch{} 
+      startBtn.disabled = false; stopBtn.disabled = true; flipBtn.disabled = true;
+      modeBadge.textContent = 'Scanner: Ready';
+      setStatus('📷 Camera stopped.', 'success');
+    }
+    
+    async function restartCamera(){ 
+      await stopCamera(); 
+      await startCamera(); 
+    }
 
     async function onScanSuccess(decodedText){
       const now = Date.now();
       if (decodedText === state.lastDecoded && now - state.lastTime < 2500) return;
       state.lastDecoded = decodedText; state.lastTime = now;
       const digits = decodedText.replace(/\D/g,'');
-      if (!/^\d{8}$|^\d{12}$|^\d{13}$/.test(digits)) return setStatus(`Scanned “${decodedText}” — not a supported EAN/UPC code.`,'warn');
+      if (!/^\d{8}$|^\d{12}$|^\d{13}$/.test(digits)) return setStatus(`⚠️ "${decodedText}" not a valid barcode.`,'warning');
       try{
-        const p = await fetchProduct(digits); state.currentProduct=p; renderProduct(p);
-        setStatus(`Found product for ${digits}.`,'success'); toast(`Found: ${p.name || 'Product'} (${digits})`);
-      }catch(err){ setStatus(err.message,'error'); state.currentProduct=null; renderProduct(null); }
+        const p = await fetchProduct(digits); 
+        state.currentProduct=p; 
+        renderProduct(p);
+        setStatus(`✅ Found product for ${digits}.`,'success'); 
+        toast(`🎉 Scanned: ${p.name || 'Product'}`);
+      }catch(err){ 
+        setStatus(`❌ ${err.message}`,'error'); 
+        state.currentProduct=null; 
+        renderProduct(null); 
+      }
     }
 
-    // File decode (ZXing)
+    // File decode
     $('fileDecode').addEventListener('click', async ()=>{
       const f = $('fileInput').files?.[0];
-      if (!f) return setStatus('Choose an image first.','warn');
+      if (!f) return setStatus('⚠️ Choose an image first.','warning');
       await decodeFromImageFile(f);
     });
+    
     $('liteDecodeBtn')?.addEventListener('click', async ()=>{
       const f = $('liteFile').files?.[0];
-      if (!f) return setStatus('Choose an image first.','warn');
+      if (!f) return setStatus('⚠️ Choose an image first.','warning');
       await decodeFromImageFile(f);
     });
 
     async function decodeFromImageFile(file){
       const hasZX = await ensureZXing();
-      if (!hasZX){ setStatus('Could not load decoder library for file scanning.','error'); return; }
+      if (!hasZX){ 
+        setStatus('❌ Could not load decoder library.','error'); 
+        return; 
+      }
       const codeReader = new ZXing.BrowserBarcodeReader();
       const url = URL.createObjectURL(file);
-      setStatus('Decoding image…');
+      setStatus('🔍 Decoding image...', 'success');
       try{
         const res = await codeReader.decodeFromImageUrl(url);
         const decoded = res?.text;
-        if (!decoded) return setStatus('No barcode detected in the image.','warn');
+        if (!decoded) return setStatus('⚠️ No barcode found in image.','warning');
         const digits = decoded.replace(/\D/g,'');
-        if (!/^\d{8}$|^\d{12}$|^\d{13}$/.test(digits)) return setStatus(`Decoded “${decoded}” — not a supported EAN/UPC code.`, 'warn');
-        const p = await fetchProduct(digits); state.currentProduct=p; renderProduct(p);
-        setStatus(`Found product for ${digits}.`, 'success'); toast(`Found: ${p.name || 'Product'} (${digits})`);
-      }catch(e){ setStatus('Failed to decode / fetch product from the image.', 'error'); }
-      finally{ URL.revokeObjectURL(url); codeReader.reset(); }
+        if (!/^\d{8}$|^\d{12}$|^\d{13}$/.test(digits)) return setStatus(`⚠️ "${decoded}" not a valid barcode.`, 'warning');
+        const p = await fetchProduct(digits); 
+        state.currentProduct=p; 
+        renderProduct(p);
+        setStatus(`✅ Found product for ${digits}.`, 'success'); 
+        toast(`🎉 Found: ${p.name || 'Product'}`);
+      }catch(e){ 
+        setStatus('❌ Failed to decode image.', 'error'); 
+      }finally{ 
+        URL.revokeObjectURL(url); 
+        codeReader.reset(); 
+      }
     }
 
-    /***** Local storage for goals / today / queue *****/
+    /***** Local storage *****/
     function saveLocal(k, v){ try{ localStorage.setItem('fbw_'+k, JSON.stringify(v)); }catch{} }
     function loadLocal(k){ try{ const v=localStorage.getItem('fbw_'+k); return v?JSON.parse(v):null; }catch{ return null; } }
+    
     function loadPersisted(){
       const g = loadLocal('goals'); if (g) state.goals = g;
       const t = loadLocal('today'); if (t) state.today = t;
@@ -633,11 +1199,13 @@
     function boot(){
       loadPersisted();
       if (!(location.protocol === 'https:' || location.hostname === 'localhost')) {
-        setStatus('Tip: open over HTTPS or localhost for camera access. File upload still works.', 'warn');
+        setStatus('💡 Use HTTPS for camera access. File upload works anywhere.', 'warning');
+      } else {
+        setStatus('✨ Ready to scan barcodes!', 'success');
       }
-      // onboarding first time
       if (!state.goals || !state.goals.calories) maybeShowOnboarding();
     }
+    
     window.addEventListener('DOMContentLoaded', boot);
   </script>
 </body>
