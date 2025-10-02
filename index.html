@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Food Barcode → Word Doc (Refactor: Nutrition)</title>
+  <meta name="theme-color" content="#0f172a" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-theme="auto">
+  <a href="#main" class="skip-link">Skip to main content</a>
+
+  <header class="app-header">
+    <h1>🍎 Food Barcode → Word Doc</h1>
+    <div class="header-controls">
+      <button class="settings-btn" id="settingsBtn" aria-haspopup="dialog" aria-controls="settingsModal">⚙️ Settings</button>
+    </div>
+  </header>
+
+  <main id="main" class="stack" aria-live="polite">
+    <!-- ===== Nutrition (Refactored) ===== -->
+    <section class="card stack" aria-labelledby="targetsHeading">
+      <div class="row keep-row" style="justify-content: space-between; align-items: center;">
+        <h2 id="targetsHeading">📊 Today's Targets & Progress</h2>
+        <button id="editGoalsBtn" class="ghost" style="min-height: 36px; padding: 8px 12px;" aria-haspopup="dialog" aria-controls="editGoalsModal">
+          ✏️ Edit Goals
+        </button>
+      </div>
+
+      <!-- Goal pills -->
+      <div id="targets" class="row targets-wrap" role="group" aria-label="Daily targets"></div>
+
+      <!-- Progressbars with proper ARIA -->
+      <div class="stack">
+        <div class="row">
+          <div class="progress-container">
+            <div class="progress-header">
+              <span id="calLabel" class="progress-label">Calories</span>
+              <span id="calTxt" class="progress-value">0 / 0</span>
+            </div>
+            <div class="bar" role="progressbar" aria-labelledby="calLabel" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0">
+              <span id="calBar"></span>
+            </div>
+          </div>
+          <div class="progress-container">
+            <div class="progress-header">
+              <span id="proLabel" class="progress-label">Protein (g)</span>
+              <span id="proTxt" class="progress-value">0 / 0</span>
+            </div>
+            <div class="bar" role="progressbar" aria-labelledby="proLabel" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0">
+              <span id="proBar"></span>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="progress-container">
+            <div class="progress-header">
+              <span id="fatLabel" class="progress-label">Fat (g)</span>
+              <span id="fatTxt" class="progress-value">0 / 0</span>
+            </div>
+            <div class="bar" role="progressbar" aria-labelledby="fatLabel" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0">
+              <span id="fatBar"></span>
+            </div>
+          </div>
+          <div class="progress-container">
+            <div class="progress-header">
+              <span id="carbLabel" class="progress-label">Carbs (g)</span>
+              <span id="carbTxt" class="progress-value">0 / 0</span>
+            </div>
+            <div class="bar" role="progressbar" aria-labelledby="carbLabel" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0">
+              <span id="carbBar"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="goalHint" class="muted">💡 Set your goals to track your daily nutrition progress.</div>
+      <p class="sr-only" id="progressAnnouncer" aria-live="polite" aria-atomic="true"></p>
+    </section>
+
+    <!-- ===== Queue preview (optional hook for totals) ===== -->
+    <section class="card stack" aria-label="Document queue">
+      <h2>📋 Items to Export</h2>
+      <div id="queue" class="stack muted">Nothing added yet.</div>
+      <div class="row">
+        <button id="exportDocx" disabled>📄 Export Word (.docx)</button>
+        <button id="removeLast" class="secondary" disabled>❌ Remove Last</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===== Edit Goals Modal ===== -->
+  <div id="editGoalsModal" class="modal-backdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="editGoalsTitle">
+      <h3 id="editGoalsTitle">🎯 Edit Your Goals</h3>
+      <div class="muted" style="margin-bottom: 20px;">Customize your daily nutrition targets</div>
+
+      <form id="goalsForm" class="grid grid-cols-2" novalidate>
+        <div class="stack">
+          <label for="editCalories">Daily Calories <span class="muted">(800–5000)</span></label>
+          <input id="editCalories" name="calories" type="number" min="800" max="5000" step="50" placeholder="e.g. 2000" required>
+        </div>
+        <div class="stack">
+          <label for="editProtein">Protein (g) <span class="muted">(20–300)</span></label>
+          <input id="editProtein" name="proteinG" type="number" min="20" max="300" step="5" placeholder="e.g. 150" required>
+        </div>
+        <div class="stack">
+          <label for="editFat">Fat (g) <span class="muted">(20–200)</span></label>
+          <input id="editFat" name="fatG" type="number" min="20" max="200" step="5" placeholder="e.g. 65" required>
+        </div>
+        <div class="stack">
+          <label for="editCarbs">Carbs (g) <span class="muted">(50–500)</span></label>
+          <input id="editCarbs" name="carbsG" type="number" min="50" max="500" step="10" placeholder="e.g. 250" required>
+        </div>
+      </form>
+
+      <div class="muted" style="margin: 16px 0;">💡 Or use the calculator based on your weight and goals:</div>
+
+      <div class="grid grid-cols-2">
+        <div class="stack">
+          <label for="calcWeight">Current Weight (kg)</label>
+          <input id="calcWeight" type="number" min="30" max="300" step="0.1" placeholder="e.g. 75">
+        </div>
+        <div class="stack">
+          <label for="calcGoalWeight">Goal Weight (kg)</label>
+          <input id="calcGoalWeight" type="number" min="30" max="300" step="0.1" placeholder="e.g. 70">
+        </div>
+      </div>
+
+      <div class="row" style="margin-top: 16px;">
+        <button id="calculateGoalsBtn" class="secondary">🧮 Calculate from Weight</button>
+      </div>
+
+      <div role="alert" id="goalsMsg" class="muted" style="margin-top: 12px;"></div>
+
+      <div class="row" style="margin-top: 24px;">
+        <button id="saveGoalsBtn">✅ Save Goals</button>
+        <button id="cancelGoalsBtn" class="secondary">❌ Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Toast ===== -->
+  <div id="toast" role="status" aria-live="assertive" aria-atomic="true"></div>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
