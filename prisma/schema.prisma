@@ -1,0 +1,197 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Profile data
+  weight        Float?
+  goalWeight    Float?
+  height        Float?
+  age           Int?
+  activityLevel String?
+  goals         String[] // ["weight_loss", "muscle_gain", "maintenance"]
+
+  // Nutrition goals
+  calorieGoal  Int?
+  proteinGoal  Float?
+  fatGoal      Float?
+  carbGoal     Float?
+
+  // Relations
+  foodLogs     FoodLog[]
+  workouts     Workout[]
+  exercises    Exercise[]
+  templates    WorkoutTemplate[]
+
+  @@map("users")
+}
+
+model FoodLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  barcode   String?
+  name      String
+  brand     String?
+  quantity  String?
+  amountG   Float
+  
+  // Nutrition per 100g
+  caloriesPer100g Float?
+  proteinPer100g  Float?
+  fatPer100g      Float?
+  carbsPer100g    Float?
+  fiberPer100g    Float?
+  sugarPer100g    Float?
+  saltPer100g     Float?
+  
+  // Calculated nutrition for portion
+  calories Float?
+  protein  Float?
+  fat      Float?
+  carbs    Float?
+  
+  imageUrl    String?
+  ingredients String?
+  allergens   String?
+  
+  loggedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@map("food_logs")
+}
+
+model Exercise {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name        String
+  category    String   // "chest", "back", "legs", "shoulders", "arms", "core", "cardio"
+  muscleGroup String[] // ["chest", "triceps", "shoulders"]
+  equipment   String?  // "barbell", "dumbbell", "machine", "bodyweight"
+  description String?
+  instructions String?
+  imageUrl    String?
+  
+  isCustom    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  workoutExercises WorkoutExercise[]
+  templateExercises TemplateExercise[]
+
+  @@map("exercises")
+}
+
+model WorkoutTemplate {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name        String
+  description String?
+  category    String?  // "push", "pull", "legs", "full_body", "cardio"
+  duration    Int?     // estimated duration in minutes
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  exercises   TemplateExercise[]
+  workouts    Workout[]
+
+  @@map("workout_templates")
+}
+
+model TemplateExercise {
+  id         String          @id @default(cuid())
+  templateId String
+  template   WorkoutTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  exerciseId String
+  exercise   Exercise        @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  
+  order      Int
+  sets       Int?
+  reps       String? // "8-12" or "10" or "AMRAP"
+  weight     Float?
+  duration   Int?    // for time-based exercises (seconds)
+  distance   Float?  // for distance-based exercises (meters)
+  restTime   Int?    // rest time in seconds
+  notes      String?
+
+  @@map("template_exercises")
+}
+
+model Workout {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name       String?
+  templateId String?
+  template   WorkoutTemplate? @relation(fields: [templateId], references: [id])
+  
+  startedAt  DateTime @default(now())
+  completedAt DateTime?
+  duration   Int?     // actual duration in minutes
+  notes      String?
+  
+  createdAt  DateTime @default(now())
+  
+  // Relations
+  exercises  WorkoutExercise[]
+
+  @@map("workouts")
+}
+
+model WorkoutExercise {
+  id         String   @id @default(cuid())
+  workoutId  String
+  workout    Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  exerciseId String
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  
+  order      Int
+  completed  Boolean  @default(false)
+  notes      String?
+  
+  // Relations
+  sets       ExerciseSet[]
+
+  @@map("workout_exercises")
+}
+
+model ExerciseSet {
+  id                String          @id @default(cuid())
+  workoutExerciseId String
+  workoutExercise   WorkoutExercise @relation(fields: [workoutExerciseId], references: [id], onDelete: Cascade)
+  
+  setNumber  Int
+  reps       Int?
+  weight     Float?
+  duration   Int?    // seconds
+  distance   Float?  // meters
+  completed  Boolean @default(false)
+  restTime   Int?    // actual rest time in seconds
+  
+  createdAt  DateTime @default(now())
+
+  @@map("exercise_sets")
+}
