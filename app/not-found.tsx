@@ -16,7 +16,7 @@ export default function NotFound() {
           <CardTitle className="text-6xl font-bold text-muted-foreground mb-2">404</CardTitle>
           <CardTitle className="text-2xl font-bold mb-2">Page Not Found</CardTitle>
           <CardDescription>
-            Looks like you've wandered off the fitness path! The page you're looking for doesn't exist.
+            Looks like you&apos;ve wandered off the fitness path! The page you&apos;re looking for doesn&apos;t exist.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

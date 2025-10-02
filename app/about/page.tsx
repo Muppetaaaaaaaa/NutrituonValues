@@ -73,7 +73,7 @@ export default function AboutPage() {
             </h1>
             
             <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
-              We're on a mission to make fitness accessible, enjoyable, and effective for everyone. 
+              We&apos;re on a mission to make fitness accessible, enjoyable, and effective for everyone. 
               Our comprehensive platform combines cutting-edge technology with proven fitness science.
             </p>
           </div>
@@ -97,7 +97,7 @@ export default function AboutPage() {
                 <p className="text-lg leading-relaxed text-muted-foreground">
                   "We believe that everyone deserves access to the tools and knowledge needed to live a healthier life. 
                   FitnessPro was born from the frustration of juggling multiple apps, complicated tracking systems, 
-                  and generic advice that doesn't fit individual needs. Our platform brings everything together in 
+                  and generic advice that doesn&apos;t fit individual needs. Our platform brings everything together in 
                   one place, making it easier than ever to track nutrition, plan workouts, and see real progress."
                 </p>
                 <div className="mt-6 pt-6 border-t">
@@ -272,14 +272,14 @@ export default function AboutPage() {
               Want to Learn More?
             </h2>
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              We'd love to hear from you. Whether you have questions, feedback, or just want to say hello.
+              We&apos;d love to hear from you. Whether you have questions, feedback, or just want to say hello.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Card className="p-6 max-w-sm">
                 <CardContent className="text-center p-0">
                   <h3 className="font-semibold mb-2">Get in Touch</h3>
                   <p className="text-muted-foreground text-sm mb-4">
-                    Have questions or feedback? We're here to help.
+                    Have questions or feedback? We&apos;re here to help.
                   </p>
                   <p className="text-sm">
                     <strong>Email:</strong> hello@fitnesspro.com<br />

@@ -108,7 +108,7 @@ export default function PlansPage() {
             </h1>
             
             <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
-              Whether you're looking to lose weight, build muscle, or improve performance, 
+              Whether you&apos;re looking to lose weight, build muscle, or improve performance, 
               we have the perfect plan to help you achieve your goals.
             </p>
           </div>
@@ -122,7 +122,7 @@ export default function PlansPage() {
                 Choose Your Plan
               </h2>
               <p className="text-xl text-muted-foreground">
-                Start free, upgrade when you're ready
+                Start free, upgrade when you&apos;re ready
               </p>
             </div>
             
@@ -280,7 +280,7 @@ export default function PlansPage() {
                 },
                 {
                   question: "What if I'm not satisfied?",
-                  answer: "We offer a 30-day money-back guarantee. If you're not happy, we'll refund your payment."
+                  answer: "We offer a 30-day money-back guarantee. If you&apos;re not happy, we'll refund your payment."
                 },
                 {
                   question: "Do you offer student discounts?",
