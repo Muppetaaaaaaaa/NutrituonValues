@@ -4,31 +4,69 @@ $ next dev --turbopack
    - Network:      http://169.254.0.21:3000
 
  ✓ Starting...
-Attention: Next.js now collects completely anonymous telemetry regarding usage.
-This information is used to shape Next.js' roadmap and prioritize features.
-You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
-https://nextjs.org/telemetry
-
- ✓ Compiled middleware in 323ms
- ✓ Ready in 1847ms
+ ✓ Compiled middleware in 367ms
+ ✓ Ready in 1896ms
  ○ Compiling /login ...
- ✓ Compiled /login in 5.2s
+ ✓ Compiled /login in 6s
  ⚠ Unsupported metadata viewport is configured in metadata export in /login. Please move it to viewport export instead.
 Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
- GET /login 200 in 5971ms
- ⚠ Unsupported metadata viewport is configured in metadata export in /login. Please move it to viewport export instead.
-Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
- GET /login 200 in 197ms
+ GET /login 200 in 6843ms
  ⚠ Cross origin request detected from stale-schools-judge.lindy.site to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
 Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
- ✓ Compiled /favicon.ico in 476ms
- GET /favicon.ico?favicon.bf3c9292.ico 200 in 805ms
- ✓ Compiled /api/auth/site-login in 352ms
- POST /api/auth/site-login 401 in 645ms
+ ✓ Compiled /favicon.ico in 459ms
+ GET /favicon.ico?favicon.bf3c9292.ico 200 in 787ms
+ ○ Compiling / ...
+ ✓ Compiled / in 1308ms
+ ⚠ Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET / 200 in 1986ms
+ ○ Compiling /api/auth/site-login ...
+ ✓ Compiled /api/auth/site-login in 633ms
+ POST /api/auth/site-login 401 in 963ms
+ ○ Compiling /plans ...
+ ✓ Compiled /plans in 895ms
+ ⚠ Unsupported metadata viewport is configured in metadata export in /plans. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET /plans 200 in 1015ms
+ ⚠ Unsupported metadata viewport is configured in metadata export in /plans. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET /plans 200 in 167ms
+ ⚠ Unsupported metadata viewport is configured in metadata export in /plans. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET /plans 200 in 116ms
+ ⚠ Unsupported metadata viewport is configured in metadata export in /plans. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ ○ Compiling /workouts ...
+ GET /plans 200 in 115ms
+ ✓ Compiled /workouts in 979ms
+ ⚠ Unsupported metadata viewport is configured in metadata export in /workouts. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET /workouts 200 in 1208ms
+ ⚠ Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET / 200 in 228ms
+ ✓ Compiled middleware in 3ms
+ ✓ Compiled in 179ms
+ ✓ Compiled in 468ms
+ ✓ Compiled /login in 50ms
  ⚠ Unsupported metadata viewport is configured in metadata export in /login. Please move it to viewport export instead.
 Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
- GET /login 200 in 216ms
- GET /favicon.ico?favicon.bf3c9292.ico 200 in 266ms
- POST /api/auth/site-login 401 in 264ms
- ✓ Compiled middleware in 3ms
- ✓ Compiled in 168ms
+ GET /login 200 in 366ms
+ ✓ Compiled in 712ms
+ ✓ Compiled /login in 41ms
+ ⚠ Unsupported metadata viewport is configured in metadata export in /login. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET /login 200 in 326ms
+ ⚠ Unsupported metadata viewport is configured in metadata export in /login. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET /login 200 in 139ms
+ ⚠ Unsupported metadata viewport is configured in metadata export in /login. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET /login 200 in 126ms
+ ⚠ Unsupported metadata viewport is configured in metadata export in /login. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET /login 200 in 109ms
+ ✓ Compiled in 284ms
+ ⚠ Unsupported metadata viewport is configured in metadata export in /login. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET /login 200 in 125ms

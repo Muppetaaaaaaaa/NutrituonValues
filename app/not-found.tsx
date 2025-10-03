@@ -1,16 +1,22 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Home, Search, ArrowLeft, Dumbbell } from 'lucide-react'
+import { Home, Search } from 'lucide-react'
+import Image from 'next/image'
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 via-cyan-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 p-4">
       <Card className="w-full max-w-md text-center">
         <CardHeader>
           <div className="flex justify-center mb-4">
-            <div className="p-4 bg-blue-100 dark:bg-blue-900 rounded-full">
-              <Dumbbell className="h-12 w-12 text-blue-600 dark:text-blue-400" />
+            <div className="relative w-20 h-20">
+              <Image 
+                src="/logo.png" 
+                alt="BetterU Logo" 
+                fill
+                className="object-contain"
+              />
             </div>
           </div>
           <CardTitle className="text-6xl font-bold text-muted-foreground mb-2">404</CardTitle>
@@ -21,7 +27,7 @@ export default function NotFound() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Button asChild className="w-full">
+            <Button asChild className="w-full bg-teal-600 hover:bg-teal-700">
               <Link href="/">
                 <Home className="h-4 w-4 mr-2" />
                 Back to Home
