@@ -49,7 +49,7 @@ export default function LoginPage() {
           <div className="flex justify-center mb-4">
             <div className="relative w-20 h-20">
               <Image 
-                src="/logo.png" 
+                src="public/logo.png" 
                 alt="BetterU Logo" 
                 fill
                 className="object-contain"
