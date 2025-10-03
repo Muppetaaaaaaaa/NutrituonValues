@@ -1,1 +1,1 @@
-# FitnessPro - Complete Fitness Platform
+# BetterU - Complete Fitness Platform
