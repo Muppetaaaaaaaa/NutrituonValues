@@ -37,8 +37,31 @@ model User {
   workouts     Workout[]
   exercises    Exercise[]
   templates    WorkoutTemplate[]
+  purchasedPlans PurchasedPlan[]
 
   @@map("users")
+}
+
+model PurchasedPlan {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  planId      String
+  planName    String
+  planType    String   // "workout" or "meal"
+  planLevel   String   // "beginner", "intermediate", "advanced"
+  price       Float
+  
+  // Plan details
+  description String
+  duration    String
+  overview    String   // e.g., "PPLPPL split for newbies"
+  features    String[] // Array of features
+  
+  purchasedAt DateTime @default(now())
+  
+  @@map("purchased_plans")
 }
 
 model FoodLog {

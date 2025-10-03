@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Eye, EyeOff } from 'lucide-react'
-import Image from 'next/image'
 
 export default function LoginPage() {
   const [password, setPassword] = useState('')
@@ -47,12 +46,11 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="relative w-20 h-20">
-              <Image 
-                src="public/logo.png" 
+            <div className="w-20 h-20 flex items-center justify-center">
+              <img 
+                src="/logo.png" 
                 alt="BetterU Logo" 
-                fill
-                className="object-contain"
+                className="w-full h-full object-contain"
               />
             </div>
           </div>

@@ -4,6 +4,7 @@ import { Navigation } from '@/components/ui/custom/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { 
   Check, 
   Star, 
@@ -12,7 +13,9 @@ import {
   Apple,
   Zap,
   Target,
-  Filter
+  Filter,
+  Search,
+  MessageSquare
 } from 'lucide-react'
 import { useState } from 'react'
 import {
@@ -22,162 +25,217 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { useRouter } from 'next/navigation'
 
 const plans = [
   {
-    id: 1,
+    id: '1',
     name: 'Beginner Full Body Workout',
     type: 'workout',
     level: 'beginner',
     price: 29,
     duration: '8 weeks',
-    description: 'Perfect for those new to fitness. Build a strong foundation with full-body workouts.',
+    overview: 'Full-body training 3x per week for complete beginners',
+    description: 'Perfect for those new to fitness. Build a strong foundation with full-body workouts designed to teach proper form and build strength progressively.',
     features: [
-      '3 workouts per week',
-      'Video demonstrations',
+      '3 workouts per week (45-60 min each)',
+      'Video demonstrations for every exercise',
       'Progressive overload system',
       'Warm-up & cool-down routines',
-      'Exercise substitutions'
+      'Exercise substitutions for home/gym',
+      'Form check guidelines'
     ],
     popular: false
   },
   {
-    id: 2,
-    name: 'Intermediate Strength Builder',
+    id: '2',
+    name: 'PPL Strength Builder',
     type: 'workout',
     level: 'intermediate',
     price: 49,
     duration: '12 weeks',
-    description: 'Take your strength to the next level with advanced training techniques.',
+    overview: 'PPLPPL split for intermediate lifters seeking strength gains',
+    description: 'Push-Pull-Legs split running 6 days per week. Designed for those with 6+ months of training experience looking to maximize strength and muscle growth.',
     features: [
-      '4-5 workouts per week',
-      'Push/Pull/Legs split',
-      'Progressive overload tracking',
+      '6 workouts per week (60-75 min each)',
+      'Push/Pull/Legs split repeated twice weekly',
+      'Progressive overload tracking sheets',
       'Deload weeks included',
-      'Form check guidelines',
-      'Nutrition timing tips'
+      'Compound movement focus',
+      'Accessory work for weak points',
+      'Nutrition timing recommendations'
     ],
     popular: true
   },
   {
-    id: 3,
-    name: 'Advanced Muscle Gain',
+    id: '3',
+    name: 'Advanced Hypertrophy Program',
     type: 'workout',
     level: 'advanced',
     price: 69,
     duration: '16 weeks',
-    description: 'Elite program for serious lifters looking to maximize muscle growth.',
+    overview: 'Elite muscle-building program with advanced periodization',
+    description: 'Comprehensive hypertrophy-focused program for experienced lifters. Includes advanced techniques like drop sets, supersets, and periodized training blocks.',
     features: [
-      '5-6 workouts per week',
-      'Advanced periodization',
-      'Hypertrophy-focused training',
+      '5-6 workouts per week (75-90 min each)',
+      'Advanced periodization (accumulation/intensification)',
+      'Hypertrophy-specific training techniques',
       'Peak week protocols',
-      'Recovery optimization',
-      'Supplement guide',
-      'Monthly progress assessments'
+      'Recovery optimization strategies',
+      'Supplement timing guide',
+      'Monthly progress assessments',
+      'Direct coach support via email'
     ],
     popular: false
   },
   {
-    id: 4,
+    id: '4',
     name: 'Weight Loss Meal Plan',
     type: 'meal',
     level: 'beginner',
     price: 39,
     duration: '4 weeks',
-    description: 'Sustainable calorie deficit with delicious, easy-to-prepare meals.',
+    overview: 'Sustainable calorie deficit with delicious, easy meals',
+    description: 'Lose weight without feeling deprived. This meal plan provides balanced nutrition in a calorie deficit with recipes that are simple to prepare and actually taste good.',
     features: [
-      'Daily meal plans',
-      'Shopping lists included',
-      'Macro-balanced recipes',
-      '1500-1800 calories/day',
-      'Vegetarian options',
-      'Meal prep guides'
+      'Daily meal plans (breakfast, lunch, dinner, snacks)',
+      'Weekly shopping lists included',
+      'Macro-balanced recipes (40% carbs, 30% protein, 30% fat)',
+      '1500-1800 calories/day (adjustable)',
+      'Vegetarian & vegan options',
+      'Meal prep guides for busy schedules',
+      '50+ delicious recipes'
     ],
     popular: false
   },
   {
-    id: 5,
+    id: '5',
     name: 'Muscle Gain Meal Plan',
     type: 'meal',
     level: 'intermediate',
     price: 45,
     duration: '4 weeks',
-    description: 'High-protein meal plan designed to support muscle growth and recovery.',
+    overview: 'High-protein nutrition to fuel muscle growth and recovery',
+    description: 'Optimized for muscle building with high protein intake and strategic carb timing around workouts. Includes calorie surplus guidelines based on your training intensity.',
     features: [
-      'Daily meal plans',
+      'Daily meal plans with 2500-3000 calories',
+      'High-protein recipes (1g per lb bodyweight)',
+      'Pre & post-workout meal timing',
       'Shopping lists included',
-      'High-protein recipes',
-      '2500-3000 calories/day',
-      'Pre/post workout meals',
-      'Meal timing strategies',
-      'Supplement recommendations'
+      'Meal timing strategies for muscle growth',
+      'Supplement recommendations',
+      'Recipe variations for dietary preferences',
+      'Bulk cooking guides'
     ],
     popular: true
   },
   {
-    id: 6,
+    id: '6',
     name: 'Beginner Cardio Program',
     type: 'workout',
     level: 'beginner',
     price: 25,
     duration: '6 weeks',
-    description: 'Build cardiovascular endurance with progressive cardio training.',
+    overview: 'Build cardiovascular endurance from scratch',
+    description: 'Progressive cardio program perfect for beginners. Start with low-impact activities and gradually build up your endurance and cardiovascular fitness.',
     features: [
-      '3-4 sessions per week',
-      'Low-impact options',
-      'Heart rate zone training',
-      'Progress tracking',
-      'Recovery protocols'
+      '3-4 sessions per week (20-40 min)',
+      'Low-impact options (walking, cycling, swimming)',
+      'Heart rate zone training explained',
+      'Progress tracking templates',
+      'Recovery protocols',
+      'Transition to running program included'
     ],
     popular: false
   },
   {
-    id: 7,
+    id: '7',
     name: 'Flexible Dieting Guide',
     type: 'meal',
     level: 'intermediate',
     price: 35,
     duration: '4 weeks',
-    description: 'Learn to track macros and enjoy your favorite foods while hitting your goals.',
+    overview: 'Learn IIFYM (If It Fits Your Macros) approach to nutrition',
+    description: 'Master flexible dieting and learn to track macros while still enjoying your favorite foods. Perfect for sustainable long-term nutrition habits.',
     features: [
-      'Macro calculation guide',
-      'Food tracking tutorials',
-      'Restaurant eating tips',
-      'Recipe database access',
-      'Flexible meal templates'
+      'Macro calculation guide for your goals',
+      'Food tracking tutorials (MyFitnessPal)',
+      'Restaurant eating strategies',
+      'Recipe database access (200+ recipes)',
+      'Flexible meal templates',
+      'How to fit treats into your macros',
+      'Alcohol and social eating guide'
     ],
     popular: false
   },
   {
-    id: 8,
-    name: 'Advanced HIIT Training',
+    id: '8',
+    name: 'HIIT Fat Loss Program',
     type: 'workout',
     level: 'advanced',
     price: 55,
     duration: '8 weeks',
-    description: 'High-intensity interval training for maximum fat loss and conditioning.',
+    overview: 'High-intensity training for maximum fat loss',
+    description: 'Intense HIIT workouts designed to maximize calorie burn and preserve muscle mass during a cut. Requires good cardiovascular base and training experience.',
     features: [
-      '4 HIIT sessions per week',
-      'Metabolic conditioning',
-      'Tabata protocols',
-      'Recovery strategies',
-      'Performance tracking',
-      'Nutrition guidelines'
+      '4 HIIT sessions per week (30-45 min)',
+      'Metabolic conditioning workouts',
+      'Tabata & EMOM protocols',
+      'Active recovery strategies',
+      'Performance tracking metrics',
+      'Nutrition guidelines for fat loss',
+      'Supplement recommendations'
     ],
     popular: false
   }
 ]
 
 export default function PlansPage() {
+  const router = useRouter()
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [levelFilter, setLevelFilter] = useState<string>('all')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedPlan, setSelectedPlan] = useState<typeof plans[0] | null>(null)
 
   const filteredPlans = plans.filter(plan => {
     const matchesType = typeFilter === 'all' || plan.type === typeFilter
     const matchesLevel = levelFilter === 'all' || plan.level === levelFilter
-    return matchesType && matchesLevel
+    const matchesSearch = plan.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         plan.overview.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         plan.description.toLowerCase().includes(searchQuery.toLowerCase())
+    return matchesType && matchesLevel && matchesSearch
   })
+
+  const handlePurchase = (plan: typeof plans[0]) => {
+    // Store in localStorage for demo (in production, this would be an API call)
+    const existingPlans = localStorage.getItem('purchasedPlans')
+    const purchasedPlans = existingPlans ? JSON.parse(existingPlans) : []
+    
+    // Check if already purchased
+    if (purchasedPlans.some((p: any) => p.id === plan.id)) {
+      alert('You already own this plan! Check your dashboard.')
+      return
+    }
+    
+    purchasedPlans.push({
+      ...plan,
+      purchasedAt: new Date().toISOString()
+    })
+    
+    localStorage.setItem('purchasedPlans', JSON.stringify(purchasedPlans))
+    
+    // Show success and redirect
+    alert(`Successfully purchased ${plan.name}! Redirecting to your dashboard...`)
+    router.push('/dashboard')
+  }
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -202,43 +260,110 @@ export default function PlansPage() {
           </div>
         </section>
 
-        {/* Filters Section */}
+        {/* Search & Filters Section */}
         <section className="py-8 px-4 border-b bg-background sticky top-16 z-40">
           <div className="container mx-auto">
-            <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Filter className="h-5 w-5 text-muted-foreground" />
-                <span className="font-semibold">Filter Plans:</span>
+            <div className="flex flex-col gap-4">
+              {/* Search Bar */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Search plans by name, type, or description..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
               </div>
               
-              <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-                <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger className="w-full sm:w-[180px]">
-                    <SelectValue placeholder="Plan Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="workout">Workout Plans</SelectItem>
-                    <SelectItem value="meal">Meal Plans</SelectItem>
-                  </SelectContent>
-                </Select>
+              {/* Filters */}
+              <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-5 w-5 text-muted-foreground" />
+                  <span className="font-semibold">Filters:</span>
+                </div>
+                
+                <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+                  <Select value={typeFilter} onValueChange={setTypeFilter}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                      <SelectValue placeholder="Plan Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="workout">Workout Plans</SelectItem>
+                      <SelectItem value="meal">Meal Plans</SelectItem>
+                    </SelectContent>
+                  </Select>
 
-                <Select value={levelFilter} onValueChange={setLevelFilter}>
-                  <SelectTrigger className="w-full sm:w-[180px]">
-                    <SelectValue placeholder="Difficulty Level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Levels</SelectItem>
-                    <SelectItem value="beginner">Beginner</SelectItem>
-                    <SelectItem value="intermediate">Intermediate</SelectItem>
-                    <SelectItem value="advanced">Advanced</SelectItem>
-                  </SelectContent>
-                </Select>
+                  <Select value={levelFilter} onValueChange={setLevelFilter}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                      <SelectValue placeholder="Difficulty Level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Levels</SelectItem>
+                      <SelectItem value="beginner">Beginner</SelectItem>
+                      <SelectItem value="intermediate">Intermediate</SelectItem>
+                      <SelectItem value="advanced">Advanced</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
             
-            <div className="mt-4 text-sm text-muted-foreground">
-              Showing {filteredPlans.length} {filteredPlans.length === 1 ? 'plan' : 'plans'}
+            <div className="mt-4 flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">
+                Showing {filteredPlans.length} {filteredPlans.length === 1 ? 'plan' : 'plans'}
+              </div>
+              
+              {/* Custom Plan Button */}
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="gap-2">
+                    <MessageSquare className="h-4 w-4" />
+                    Request Custom Plan
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Request a Custom Plan</DialogTitle>
+                    <DialogDescription>
+                      Can't find what you're looking for? Let us create a personalized plan just for you.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <p className="text-sm text-muted-foreground">
+                      Our expert trainers and nutritionists can design a completely custom workout or meal plan tailored to your:
+                    </p>
+                    <ul className="space-y-2 text-sm">
+                      <li className="flex items-start">
+                        <Check className="h-4 w-4 text-teal-600 mr-2 mt-0.5" />
+                        <span>Specific fitness goals and timeline</span>
+                      </li>
+                      <li className="flex items-start">
+                        <Check className="h-4 w-4 text-teal-600 mr-2 mt-0.5" />
+                        <span>Available equipment and training environment</span>
+                      </li>
+                      <li className="flex items-start">
+                        <Check className="h-4 w-4 text-teal-600 mr-2 mt-0.5" />
+                        <span>Dietary restrictions and preferences</span>
+                      </li>
+                      <li className="flex items-start">
+                        <Check className="h-4 w-4 text-teal-600 mr-2 mt-0.5" />
+                        <span>Schedule and time constraints</span>
+                      </li>
+                    </ul>
+                    <div className="pt-4">
+                      <p className="text-sm font-semibold mb-2">Custom Plan Pricing:</p>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Custom workout plans start at $99 | Custom meal plans start at $79
+                      </p>
+                      <Button className="w-full bg-teal-600 hover:bg-teal-700">
+                        Contact Us for Custom Plan
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </section>
@@ -282,6 +407,12 @@ export default function PlansPage() {
                   </CardHeader>
                   
                   <CardContent className="flex-1 flex flex-col">
+                    <div className="mb-4 p-3 bg-teal-50 dark:bg-teal-950 rounded-lg border border-teal-200 dark:border-teal-800">
+                      <p className="text-sm font-semibold text-teal-900 dark:text-teal-100">
+                        {plan.overview}
+                      </p>
+                    </div>
+                    
                     <p className="text-sm text-muted-foreground mb-4">
                       {plan.description}
                     </p>
@@ -289,21 +420,92 @@ export default function PlansPage() {
                     <div className="space-y-3 mb-6 flex-1">
                       <h4 className="font-semibold text-sm">What's included:</h4>
                       <ul className="space-y-2">
-                        {plan.features.map((feature, featureIndex) => (
+                        {plan.features.slice(0, 4).map((feature, featureIndex) => (
                           <li key={featureIndex} className="flex items-start space-x-2">
                             <Check className="h-4 w-4 text-teal-600 flex-shrink-0 mt-0.5" />
                             <span className="text-sm">{feature}</span>
                           </li>
                         ))}
+                        {plan.features.length > 4 && (
+                          <li className="text-sm text-muted-foreground pl-6">
+                            + {plan.features.length - 4} more features
+                          </li>
+                        )}
                       </ul>
                     </div>
                     
-                    <Button 
-                      className="w-full bg-teal-600 hover:bg-teal-700" 
-                      size="lg"
-                    >
-                      Purchase Plan
-                    </Button>
+                    <div className="space-y-2">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button 
+                            variant="outline"
+                            className="w-full" 
+                            onClick={() => setSelectedPlan(plan)}
+                          >
+                            View Full Details
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle className="text-2xl">{plan.name}</DialogTitle>
+                            <DialogDescription>
+                              <Badge variant="outline" className="capitalize mt-2">
+                                {plan.level}
+                              </Badge>
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-4 py-4">
+                            <div>
+                              <h4 className="font-semibold mb-2">Overview</h4>
+                              <p className="text-sm text-muted-foreground">{plan.overview}</p>
+                            </div>
+                            
+                            <div>
+                              <h4 className="font-semibold mb-2">Description</h4>
+                              <p className="text-sm text-muted-foreground">{plan.description}</p>
+                            </div>
+                            
+                            <div>
+                              <h4 className="font-semibold mb-2">All Features</h4>
+                              <ul className="space-y-2">
+                                {plan.features.map((feature, idx) => (
+                                  <li key={idx} className="flex items-start space-x-2">
+                                    <Check className="h-4 w-4 text-teal-600 flex-shrink-0 mt-0.5" />
+                                    <span className="text-sm">{feature}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                            
+                            <div className="pt-4 border-t">
+                              <div className="flex items-center justify-between mb-4">
+                                <div>
+                                  <p className="text-sm text-muted-foreground">One-time payment</p>
+                                  <p className="text-3xl font-bold text-teal-600">${plan.price}</p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-sm text-muted-foreground">Duration</p>
+                                  <p className="text-lg font-semibold">{plan.duration}</p>
+                                </div>
+                              </div>
+                              <Button 
+                                className="w-full bg-teal-600 hover:bg-teal-700"
+                                onClick={() => handlePurchase(plan)}
+                              >
+                                Purchase Plan
+                              </Button>
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                      
+                      <Button 
+                        className="w-full bg-teal-600 hover:bg-teal-700" 
+                        onClick={() => handlePurchase(plan)}
+                      >
+                        Purchase Plan
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
@@ -311,9 +513,21 @@ export default function PlansPage() {
 
             {filteredPlans.length === 0 && (
               <div className="text-center py-12">
-                <p className="text-xl text-muted-foreground">
-                  No plans match your filters. Try adjusting your selection.
+                <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-xl font-semibold mb-2">No plans found</p>
+                <p className="text-muted-foreground mb-6">
+                  Try adjusting your filters or search query
                 </p>
+                <Button 
+                  variant="outline"
+                  onClick={() => {
+                    setSearchQuery('')
+                    setTypeFilter('all')
+                    setLevelFilter('all')
+                  }}
+                >
+                  Clear Filters
+                </Button>
               </div>
             )}
           </div>

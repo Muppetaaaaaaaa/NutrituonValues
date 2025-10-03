@@ -12,7 +12,8 @@ import {
   Activity, 
   Menu,
   Moon,
-  Sun
+  Sun,
+  LayoutDashboard
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import {
@@ -21,10 +22,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import Image from 'next/image'
 
 const navigation = [
   { name: 'Home', href: '/', icon: Home },
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Plans', href: '/plans', icon: Target },
   { name: 'Nutrition', href: '/nutrition', icon: Apple },
   { name: 'Workouts', href: '/workouts', icon: Activity },
@@ -40,12 +41,11 @@ export function Navigation() {
       <div className="container flex h-16 items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center space-x-2">
-          <div className="relative w-10 h-10">
-            <Image 
+          <div className="w-10 h-10 flex items-center justify-center">
+            <img 
               src="/logo.png" 
               alt="BetterU Logo" 
-              fill
-              className="object-contain"
+              className="w-full h-full object-contain"
             />
           </div>
           <span className="font-bold text-xl">BetterU</span>

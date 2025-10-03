@@ -70,3 +70,8 @@ Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
  ⚠ Unsupported metadata viewport is configured in metadata export in /login. Please move it to viewport export instead.
 Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
  GET /login 200 in 125ms
+ ✓ Compiled in 492ms
+ ✓ Compiled middleware in 3ms
+ ✓ Compiled middleware in 2ms
+ ✓ Compiled in 315ms
+ ✓ Compiled in 501ms
