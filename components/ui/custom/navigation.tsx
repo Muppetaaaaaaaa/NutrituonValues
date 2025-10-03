@@ -6,15 +6,13 @@ import { usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { 
-  Dumbbell, 
   Home, 
   Target, 
   Apple, 
   Activity, 
   Menu,
   Moon,
-  Sun,
-  Settings
+  Sun
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import {
@@ -23,6 +21,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import Image from 'next/image'
 
 const navigation = [
   { name: 'Home', href: '/', icon: Home },
@@ -41,10 +40,15 @@ export function Navigation() {
       <div className="container flex h-16 items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center space-x-2">
-          <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-            <Dumbbell className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+          <div className="relative w-10 h-10">
+            <Image 
+              src="/logo.png" 
+              alt="BetterU Logo" 
+              fill
+              className="object-contain"
+            />
           </div>
-          <span className="font-bold text-xl">FitnessPro</span>
+          <span className="font-bold text-xl">BetterU</span>
         </Link>
 
         {/* Desktop Navigation */}
