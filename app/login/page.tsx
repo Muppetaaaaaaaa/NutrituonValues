@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Dumbbell, Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
+import Image from 'next/image'
 
 export default function LoginPage() {
   const [password, setPassword] = useState('')
@@ -42,15 +43,20 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 via-cyan-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-full">
-              <Dumbbell className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+            <div className="relative w-20 h-20">
+              <Image 
+                src="/logo.png" 
+                alt="BetterU Logo" 
+                fill
+                className="object-contain"
+              />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">FitnessPro</CardTitle>
+          <CardTitle className="text-2xl font-bold">BetterU</CardTitle>
           <CardDescription>
             Enter the site password to access your fitness platform
           </CardDescription>
@@ -95,7 +101,7 @@ export default function LoginPage() {
 
             <Button 
               type="submit" 
-              className="w-full" 
+              className="w-full bg-teal-600 hover:bg-teal-700" 
               disabled={isLoading}
               aria-describedby="login-status"
             >
